@@ -18,3 +18,4 @@ rustler_codegen = { git = "https://github.com/hansihe/Rustler" }
 html5ever = "*"
 tendril = "*"
 lazy_static = "*"
+scoped-pool = "*"

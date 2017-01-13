@@ -4,6 +4,7 @@ extern crate rustler;
 extern crate lazy_static;
 extern crate html5ever;
 extern crate tendril;
+extern crate scoped_pool;
 
 use std::borrow::Cow;
 use std::fmt;
@@ -89,7 +90,7 @@ fn parse_async<'a>(env: NifEnv<'a>, args: &Vec<NifTerm<'a>>) -> NifResult<NifTer
 
     let pid = env.pid();
 
-    thread::spawn(move || {
+    POOL.spawn(move || {
         owned_env.send(pid, |inner_env| {
             match panic::catch_unwind(|| {
                 let input_term = input_term_saved.load(inner_env);
@@ -134,6 +135,10 @@ rustler_export_nifs!(
     [("parse_async", 1, parse_async)],
     Some(on_load)
 );
+
+lazy_static! {
+    static ref POOL: scoped_pool::Pool = scoped_pool::Pool::new(4);
+}
 
 fn on_load<'a>(env: NifEnv<'a>, _load_info: NifTerm<'a>) -> bool {
     true
