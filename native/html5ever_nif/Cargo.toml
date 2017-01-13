@@ -1,0 +1,20 @@
+[package]
+name = "html5ever_nif"
+version = "0.1.0"
+authors = ["HansiHE <hansihe@hansihe.com>"]
+
+[lib]
+name = "html5ever_nif"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+
+[build-dependencies]
+rustler_codegen = { git = "https://github.com/hansihe/Rustler" }
+
+[dependencies]
+rustler = { git = "https://github.com/hansihe/Rustler" }
+rustler_codegen = { git = "https://github.com/hansihe/Rustler" }
+
+html5ever = "*"
+tendril = "*"
+lazy_static = "*"
