@@ -6,8 +6,7 @@ extern crate html5ever;
 extern crate tendril;
 extern crate scoped_pool;
 
-use std::borrow::Cow;
-use std::fmt;
+use std::panic;
 
 use rustler::{
     NifEnv,
@@ -15,15 +14,12 @@ use rustler::{
     NifResult,
     NifEncoder,
 };
+use rustler::types::binary::NifBinary;
+use rustler::env::OwnedEnv;
 
 use html5ever::{ QualName };
 use html5ever::rcdom::{ RcDom, Handle, NodeEnum };
 use tendril::{ TendrilSink, StrTendril };
-
-//mod flat_dom;
-
-use rustler::types::binary::NifBinary;
-use rustler::env::OwnedEnv;
 
 mod atoms {
     rustler_atoms! {
@@ -38,6 +34,10 @@ mod atoms {
     }
 }
 
+// Zero-cost wrapper types which makes it possible to implement
+// NifEncoder for these externally defined types.
+// Unsure if this is a great way of doing it, but it's the way
+// that produced the cleanest and least noisy code.
 struct QNW<'a>(&'a QualName);
 struct STW<'a>(&'a StrTendril);
 
@@ -54,54 +54,78 @@ impl<'b> NifEncoder for STW<'b> {
     }
 }
 
+/// Takes a Handle from a RcDom, encodes it into a NifTerm.
+/// This follows the mochiweb encoding scheme with two exceptions:
+/// * A `{:doctype, name, pubid, sysid}` node.
+/// * Always returns a list as it's root node.
 fn handle_to_term<'a>(env: NifEnv<'a>, handle: &Handle) -> NifTerm<'a> {
     let node = handle.borrow();
 
-    let res: Vec<NifTerm<'a>> =
-        node.children.iter().map(|h| handle_to_term(env, h)).collect();
-    let children = res.encode(env);
+    // Closure so that we don't encode this when we don't need to return
+    // it to the user.
+    let children = || {
+        // Encodes a Vec<Handle> to a Vec<NifTerm>
+        let res: Vec<NifTerm<'a>> =
+            node.children.iter().map(|h| handle_to_term(env, h)).collect();
+        // Encodes to erlang list term.
+        res.encode(env)
+    };
 
     match node.node {
+        // Root document node. As far as I know, this is only located in the
+        // root of the DOM.
         NodeEnum::Document =>
-            children,
+            children(),
+
         NodeEnum::Doctype(ref name, ref pubid, ref sysid) =>
             (atoms::doctype(), STW(name), STW(pubid), STW(sysid)).encode(env),
+
         NodeEnum::Text(ref text) =>
             STW(text).encode(env),
+
         NodeEnum::Comment(ref text) =>
             (atoms::comment(), STW(text)).encode(env),
-        NodeEnum::Element(ref name, ref elem_type, ref attr) => {
-            let attr_terms: Vec<NifTerm<'a>> =
-                attr.iter().map(|a| {
-                    (QNW(&a.name), STW(&a.value)).encode(env)
-                }).collect();
 
-            (QNW(name), attr_terms, children).encode(env)
+        NodeEnum::Element(ref name, ref _elem_type, ref attributes) => {
+            let attribute_terms: Vec<NifTerm<'a>> =
+                attributes.iter()
+                .map(|a| (QNW(&a.name), STW(&a.value)).encode(env))
+                .collect();
+
+            (QNW(name), attribute_terms, children()).encode(env)
         },
     }
 }
 
-use std::thread;
-use std::panic;
+// Thread pool for `parse_async`.
+// TODO: How do we decide on pool size?
+lazy_static! {
+    static ref POOL: scoped_pool::Pool = scoped_pool::Pool::new(4);
+}
 
 fn parse_async<'a>(env: NifEnv<'a>, args: &Vec<NifTerm<'a>>) -> NifResult<NifTerm<'a>> {
     let mut owned_env = OwnedEnv::new();
-    let input_term_saved = owned_env.save(args[0]);
 
-    let pid = env.pid();
+    // Copies the term into the inner env. Since this term is normally a large
+    // binary term, copying it over should be cheap, since the binary will be
+    // refcounted within the BEAM.
+    let input_term = owned_env.save(args[0]);
+
+    let return_pid = env.pid();
 
     POOL.spawn(move || {
-        owned_env.send(pid, |inner_env| {
+        owned_env.send(return_pid, |inner_env| {
+            // This should not really be done in user code. We (Rustler project)
+            // need to find a better abstraction that eliminates this.
             match panic::catch_unwind(|| {
-                let input_term = input_term_saved.load(inner_env);
-
-                let binary: NifBinary = match input_term.decode() {
+                let binary: NifBinary = match input_term.load(inner_env).decode() {
                     Ok(inner) => inner,
                     Err(_) => panic!("argument is not a binary"),
                 };
 
                 let sink = RcDom::default();
 
+                // TODO: Use Parser.from_bytes instead?
                 let parser = html5ever::parse_document(sink, Default::default());
                 let result = parser.one(
                     std::str::from_utf8(binary.as_slice()).unwrap());
@@ -112,6 +136,8 @@ fn parse_async<'a>(env: NifEnv<'a>, args: &Vec<NifTerm<'a>>) -> NifResult<NifTer
             }) {
                 Ok(term) => term,
                 Err(err) => {
+                    // Try to extract a panic reason and return that. If this
+                    // fails, fail generically.
                     let reason =
                         if let Some(s) = err.downcast_ref::<String>() {
                             s.encode(inner_env)
@@ -136,10 +162,7 @@ rustler_export_nifs!(
     Some(on_load)
 );
 
-lazy_static! {
-    static ref POOL: scoped_pool::Pool = scoped_pool::Pool::new(4);
-}
 
-fn on_load<'a>(env: NifEnv<'a>, _load_info: NifTerm<'a>) -> bool {
+fn on_load<'a>(_env: NifEnv<'a>, _load_info: NifTerm<'a>) -> bool {
     true
 }

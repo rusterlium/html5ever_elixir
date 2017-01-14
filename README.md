@@ -1,8 +1,8 @@
 # Html5everErlang
 
-NIF wrapper of html5ever using Rustler
+NIF wrapper of html5ever using Rustler.
 
-FIXME: This currently spawns a new thread on every parse call, fix this!
+It is currently functional, but missing some features and optimization.
 
 ## Installation
 
