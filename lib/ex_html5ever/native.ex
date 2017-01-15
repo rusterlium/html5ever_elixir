@@ -3,12 +3,7 @@ defmodule NifNotLoadedError do
 end
 
 defmodule ExHtml5ever.Native do
-  @on_load :load_nif
-
-  def load_nif do
-    require Rustler
-    Rustler.load_nif(:ex_html5ever, "html5ever_nif")
-  end
+  use Rustler, otp_app: :ex_html5ever, crate: "html5ever_nif"
 
   def parse_async(binary), do: err()
 

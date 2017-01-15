@@ -15,7 +15,7 @@ defmodule ExHtml5ever.Mixfile do
   def rustler_crates do
     [
       html5ever_nif: [
-        path: "/native/html5ever_nif",
+        path: "native/html5ever_nif",
         cargo: :system,
         default_features: false,
         features: [],
