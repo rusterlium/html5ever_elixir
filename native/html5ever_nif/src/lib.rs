@@ -156,9 +156,28 @@ fn parse_async<'a>(env: NifEnv<'a>, args: &Vec<NifTerm<'a>>) -> NifResult<NifTer
     Ok(atoms::ok().encode(env))
 }
 
+fn parse_sync<'a>(env: NifEnv<'a>, args: &Vec<NifTerm<'a>>) -> NifResult<NifTerm<'a>> {
+    let binary: NifBinary = args[0].decode()?;
+    let sink = RcDom::default();
+
+    // TODO: Use Parser.from_bytes instead?
+    let parser = html5ever::parse_document(sink, Default::default());
+    let result = parser.one(
+        std::str::from_utf8(binary.as_slice()).unwrap());
+
+    //std::thread::sleep(std::time::Duration::from_millis(10));
+
+    let result_term = handle_to_term(env, &result.document);
+
+    Ok((atoms::html5ever_nif_result(), atoms::ok(), result_term)
+        .encode(env))
+
+}
+
 rustler_export_nifs!(
     "Elixir.ExHtml5ever.Native",
-    [("parse_async", 1, parse_async)],
+    [("parse_async", 1, parse_async),
+     ("parse_sync", 1, parse_sync)],
     Some(on_load)
 );
 
