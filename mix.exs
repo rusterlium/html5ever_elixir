@@ -42,6 +42,6 @@ defmodule ExHtml5ever.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:rustler, github: "hansihe/Rustler", sparse: "rustler_mix"}]
+    [{:rustler, "~> 0.6"}]
   end
 end

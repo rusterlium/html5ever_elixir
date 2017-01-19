@@ -1,1 +1,1 @@
-%{"rustler": {:git, "https://github.com/hansihe/Rustler.git", "e8ba21e44523cacb3c8af2ef952c1a9ce0f67727", [sparse: "rustler_mix"]}}
+%{"rustler": {:hex, :rustler, "0.6.0", "ba67a5e3d662876f2bf7ef5478bb3be03a7baa40e96950456526fdee29673530", [:mix], []}}

@@ -9,11 +9,11 @@ path = "src/lib.rs"
 crate-type = ["dylib"]
 
 [build-dependencies]
-rustler_codegen = { git = "https://github.com/hansihe/Rustler" }
+rustler_codegen = "^0.12"
 
 [dependencies]
-rustler = { git = "https://github.com/hansihe/Rustler" }
-rustler_codegen = { git = "https://github.com/hansihe/Rustler" }
+rustler = "^0.12"
+rustler_codegen = "^0.12"
 
 html5ever = "*"
 tendril = "*"

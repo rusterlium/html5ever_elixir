@@ -12,13 +12,19 @@ use rustler::{
     NifEnv,
     NifTerm,
     NifResult,
+    NifError,
     NifEncoder,
+    NifDecoder,
 };
 use rustler::types::binary::NifBinary;
 use rustler::env::OwnedEnv;
 
 use html5ever::{ QualName };
 use html5ever::rcdom::{ RcDom, Handle, NodeEnum };
+use html5ever::driver::ParseOpts;
+use html5ever::tokenizer::TokenizerOpts;
+use html5ever::tree_builder::TreeBuilderOpts;
+use html5ever::tree_builder::interface::QuirksMode;
 use tendril::{ TendrilSink, StrTendril };
 
 mod atoms {
@@ -27,10 +33,74 @@ mod atoms {
 
         atom ok;
         atom error;
+        atom nil;
         atom nif_panic;
 
         atom doctype;
         atom comment;
+
+        atom error_level;
+        atom discard_bom;
+        atom scripting_enabled;
+        atom iframe_srcdoc;
+        atom drop_doctype;
+
+        atom none;
+        atom some;
+        atom all;
+    }
+}
+
+#[derive(PartialEq, Eq)]
+enum ErrorLevel {
+    None,
+    Some,
+    All,
+}
+impl<'a> NifDecoder<'a> for ErrorLevel {
+    fn decode(term: NifTerm<'a>) -> NifResult<ErrorLevel> {
+        if atoms::none() == term { Ok(ErrorLevel::None) }
+        else if atoms::some() == term { Ok(ErrorLevel::Some) }
+        else if atoms::all() == term { Ok(ErrorLevel::All) }
+        else { Err(NifError::BadArg) }
+    }
+}
+
+fn term_to_configs(term: NifTerm) -> NifResult<ParseOpts> {
+    if atoms::nil() == term {
+        Ok(ParseOpts::default())
+    } else {
+        let env = term.get_env();
+
+        let errors: ErrorLevel =
+            term.map_get(atoms::error_level().to_term(env))?.decode()?;
+
+        let discard_bom: bool =
+            term.map_get(atoms::discard_bom().to_term(env))?.decode()?;
+        let scripting_enabled: bool =
+            term.map_get(atoms::scripting_enabled().to_term(env))?.decode()?;
+        let iframe_srcdoc: bool =
+            term.map_get(atoms::iframe_srcdoc().to_term(env))?.decode()?;
+        let drop_doctype: bool =
+            term.map_get(atoms::drop_doctype().to_term(env))?.decode()?;
+
+        Ok(ParseOpts {
+            tokenizer: TokenizerOpts {
+                exact_errors: errors == ErrorLevel::All,
+                discard_bom: discard_bom,
+                profile: false,
+                initial_state: None,
+                last_start_tag_name: None,
+            },
+            tree_builder: TreeBuilderOpts {
+                exact_errors: errors == ErrorLevel::All,
+                scripting_enabled: scripting_enabled,
+                iframe_srcdoc: iframe_srcdoc,
+                drop_doctype: drop_doctype,
+                ignore_missing_rules: false,
+                quirks_mode: QuirksMode::NoQuirks,
+            },
+        })
     }
 }
 
@@ -113,8 +183,10 @@ fn parse_async<'a>(env: NifEnv<'a>, args: &Vec<NifTerm<'a>>) -> NifResult<NifTer
 
     let return_pid = env.pid();
 
+    //let config = term_to_configs(args[1]);
+
     POOL.spawn(move || {
-        owned_env.send(return_pid, |inner_env| {
+        owned_env.send_and_clear(&return_pid, |inner_env| {
             // This should not really be done in user code. We (Rustler project)
             // need to find a better abstraction that eliminates this.
             match panic::catch_unwind(|| {
