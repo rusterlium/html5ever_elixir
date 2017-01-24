@@ -1,15 +1,17 @@
-defmodule ExHtml5ever.Mixfile do
+defmodule Html5ever.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :ex_html5ever,
+    [app: :html5ever,
      version: "0.1.0",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      compilers: [:rustler] ++ Mix.compilers(),
      rustler_crates: rustler_crates(),
-     deps: deps()]
+     deps: deps(),
+     description: description(),
+     package: package()]
   end
 
   def rustler_crates do
@@ -19,7 +21,8 @@ defmodule ExHtml5ever.Mixfile do
         cargo: :system,
         default_features: false,
         features: [],
-        mode: :release,#(if Mix.env == :prod, do: :release, else: :debug),
+        mode: :release,
+        # mode: (if Mix.env == :prod, do: :release, else: :debug),
       ]
     ]
   end
@@ -42,6 +45,23 @@ defmodule ExHtml5ever.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:rustler, "~> 0.6"}]
+    [{:rustler, "~> 0.6"},
+     {:ex_doc, ">= 0.0.0", only: :dev}]
   end
+
+  defp description do
+    """
+    NIF binding of html5ever using rustler.
+    """
+  end
+
+  defp package do
+    [
+      files: ["lib", "native", "mix.exs", "README.md"],
+      maintainers: ["hansihe"],
+      licenses: ["MIT", "Apache-2.0"],
+      links: %{"GitHub" => "https://github.com/hansihe/html5ever_elixir"},
+    ]
+  end
+
 end

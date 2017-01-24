@@ -247,7 +247,7 @@ fn parse_sync<'a>(env: NifEnv<'a>, args: &Vec<NifTerm<'a>>) -> NifResult<NifTerm
 }
 
 rustler_export_nifs!(
-    "Elixir.ExHtml5ever.Native",
+    "Elixir.Html5ever.Native",
     [("parse_async", 1, parse_async),
      ("parse_sync", 1, parse_sync)],
     Some(on_load)

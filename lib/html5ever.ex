@@ -1,4 +1,4 @@
-defmodule ExHtml5ever do
+defmodule Html5ever do
   @moduledoc """
   Documentation for ExHtml5ever.
   """
@@ -11,7 +11,7 @@ defmodule ExHtml5ever do
   end
 
   defp parse_async(html) do
-    ExHtml5ever.Native.parse_async(html)
+    Html5ever.Native.parse_async(html)
     receive do
       {:html5ever_nif_result, :ok, result} ->
         {:ok, result}
@@ -21,7 +21,7 @@ defmodule ExHtml5ever do
   end
 
   defp parse_sync(html) do
-    case ExHtml5ever.Native.parse_sync(html) do
+    case Html5ever.Native.parse_sync(html) do
       {:html5ever_nif_result, :ok, result} ->
         {:ok, result}
       {:html5ever_nif_result, :error, err} ->

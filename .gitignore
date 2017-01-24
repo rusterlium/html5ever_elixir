@@ -20,3 +20,5 @@ erl_crash.dump
 *.ez
 
 /priv/native
+
+/native/*/target

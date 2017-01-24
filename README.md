@@ -1,6 +1,6 @@
-# Html5everErlang
+# Html5ever binding for Elixir
 
-NIF wrapper of html5ever using Rustler.
+NIF binding of html5ever using Rustler.
 
 It is currently functional, but missing some features and optimization.
 
