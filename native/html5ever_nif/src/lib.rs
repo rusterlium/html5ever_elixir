@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate rustler;
 #[macro_use]
+extern crate rustler_codegen;
+#[macro_use]
 extern crate lazy_static;
 extern crate html5ever;
 extern crate tendril;
@@ -173,7 +175,7 @@ lazy_static! {
     static ref POOL: scoped_pool::Pool = scoped_pool::Pool::new(4);
 }
 
-fn parse_async<'a>(env: NifEnv<'a>, args: &Vec<NifTerm<'a>>) -> NifResult<NifTerm<'a>> {
+fn parse_async<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'a>> {
     let mut owned_env = OwnedEnv::new();
 
     // Copies the term into the inner env. Since this term is normally a large
@@ -228,7 +230,7 @@ fn parse_async<'a>(env: NifEnv<'a>, args: &Vec<NifTerm<'a>>) -> NifResult<NifTer
     Ok(atoms::ok().encode(env))
 }
 
-fn parse_sync<'a>(env: NifEnv<'a>, args: &Vec<NifTerm<'a>>) -> NifResult<NifTerm<'a>> {
+fn parse_sync<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'a>> {
     let binary: NifBinary = args[0].decode()?;
     let sink = RcDom::default();
 

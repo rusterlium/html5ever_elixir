@@ -8,12 +8,9 @@ name = "html5ever_nif"
 path = "src/lib.rs"
 crate-type = ["dylib"]
 
-[build-dependencies]
-rustler_codegen = "^0.12"
-
 [dependencies]
-rustler = "^0.12"
-rustler_codegen = "^0.12"
+rustler = "^0.13"
+rustler_codegen = "^0.13"
 
 html5ever = "*"
 tendril = "*"
