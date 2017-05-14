@@ -12,7 +12,7 @@ crate-type = ["dylib"]
 rustler = "^0.14"
 rustler_codegen = "^0.14"
 
-html5ever = "*"
-tendril = "*"
-lazy_static = "*"
-scoped-pool = "*"
+html5ever = "0.16"
+tendril = "0.2"
+lazy_static = "0.2"
+scoped-pool = "1"
