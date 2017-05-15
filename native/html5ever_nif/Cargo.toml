@@ -13,6 +13,8 @@ rustler = "^0.14"
 rustler_codegen = "^0.14"
 
 html5ever = "0.16"
+markup5ever = "0.1"
+
 tendril = "0.2"
 lazy_static = "0.2"
 scoped-pool = "1"

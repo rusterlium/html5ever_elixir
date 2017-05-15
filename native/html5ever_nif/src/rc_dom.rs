@@ -3,25 +3,7 @@ use ::html5ever::rcdom::{Handle, NodeData};
 use ::html5ever::QualName;
 use ::tendril::StrTendril;
 
-// Zero-cost wrapper types which makes it possible to implement
-// NifEncoder for these externally defined types.
-// Unsure if this is a great way of doing it, but it's the way
-// that produced the cleanest and least noisy code.
-struct QNW<'a>(&'a QualName);
-struct STW<'a>(&'a StrTendril);
-
-impl<'b> NifEncoder for QNW<'b> {
-    fn encode<'a>(&self, env: NifEnv<'a>) -> NifTerm<'a> {
-        let data: &str = &*self.0.local;
-        data.encode(env)
-    }
-}
-impl<'b> NifEncoder for STW<'b> {
-    fn encode<'a>(&self, env: NifEnv<'a>) -> NifTerm<'a> {
-        let data: &str = &*self.0;
-        data.encode(env)
-    }
-}
+use ::common::{ QNW, STW };
 
 /// Takes a Handle from a RcDom, encodes it into a NifTerm.
 /// This follows the mochiweb encoding scheme with two exceptions:

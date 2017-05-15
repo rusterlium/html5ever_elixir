@@ -7,6 +7,7 @@ defmodule Html5ever.Native do
 
   def parse_async(_binary), do: err()
   def parse_sync(_binary), do: err()
+  def flat_parse_sync(_binary), do: err()
 
   defp err() do
     throw NifNotLoadedError

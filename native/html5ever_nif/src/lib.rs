@@ -4,9 +4,11 @@ extern crate rustler;
 extern crate rustler_codegen;
 #[macro_use]
 extern crate lazy_static;
-extern crate html5ever;
 extern crate tendril;
 extern crate scoped_pool;
+
+extern crate html5ever;
+extern crate markup5ever;
 
 use std::panic;
 
@@ -21,8 +23,11 @@ use html5ever::tree_builder::TreeBuilderOpts;
 use html5ever::tree_builder::QuirksMode;
 use tendril::TendrilSink;
 
+use ::common::{ QNW, STW };
+
+mod common;
 mod rc_dom;
-use rc_dom::handle_to_term;
+mod flat_dom;
 
 mod atoms {
     rustler_atoms! {
@@ -136,7 +141,7 @@ fn parse_async<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'
                 let parser = html5ever::parse_document(sink, Default::default());
                 let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
 
-                let result_term = handle_to_term(inner_env, &result.document);
+                let result_term = rc_dom::handle_to_term(inner_env, &result.document);
                 (atoms::html5ever_nif_result(), atoms::ok(), result_term.unwrap()).encode(inner_env)
             }) {
                 Ok(term) => term,
@@ -169,14 +174,32 @@ fn parse_sync<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'a
 
     // std::thread::sleep(std::time::Duration::from_millis(10));
 
-    let result_term = handle_to_term(env, &result.document);
+    let result_term = rc_dom::handle_to_term(env, &result.document);
 
     Ok((atoms::html5ever_nif_result(), atoms::ok(), result_term.unwrap()).encode(env))
+}
 
+fn flat_parse_sync<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'a>> {
+    let binary: NifBinary = args[0].decode()?;
+    let sink = flat_dom::FlatSink::new();
+
+    // TODO: Use Parser.from_bytes instead?
+    let parser = html5ever::parse_document(sink, Default::default());
+    let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
+
+    // std::thread::sleep(std::time::Duration::from_millis(10));
+
+    let result_term = flat_dom::flat_sink_to_term(env, &result);
+
+    Ok((atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env))
 }
 
 rustler_export_nifs!("Elixir.Html5ever.Native",
-                     [("parse_async", 1, parse_async), ("parse_sync", 1, parse_sync)],
+                     [
+                         ("parse_async", 1, parse_async),
+                         ("parse_sync", 1, parse_sync),
+                         ("flat_parse_sync", 1, flat_parse_sync)
+                     ],
                      Some(on_load));
 
 
