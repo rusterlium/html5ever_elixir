@@ -45,7 +45,7 @@ defmodule Html5ever.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:rustler, "~> 0.9"},
+    [{:rustler, "~> 0.10.1"},
      {:ex_doc, ">= 0.0.0", only: :dev}]
   end
 
