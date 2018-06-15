@@ -5,11 +5,11 @@ use html5ever::{ QualName, Attribute };
 use html5ever::tree_builder::{ TreeSink, QuirksMode, NodeOrText, ElementFlags };
 use markup5ever::ExpandedName;
 
-use tendril::{ StrTendril, TendrilSink };
+use tendril::StrTendril;
 
 use std::borrow::Cow;
 
-use ::rustler::{ NifEnv, NifEncoder, NifTerm, NifResult };
+use ::rustler::{ Env, Encoder, Term };
 use ::common::{ STW, QNW };
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -229,14 +229,14 @@ impl TreeSink for FlatSink {
 
 }
 
-impl NifEncoder for NodeHandle {
-    fn encode<'a>(&self, env: NifEnv<'a>) -> NifTerm<'a> {
+impl Encoder for NodeHandle {
+    fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         self.0.encode(env)
     }
 }
 
-impl NifEncoder for Node {
-    fn encode<'a>(&self, env: NifEnv<'a>) -> NifTerm<'a> {
+impl Encoder for Node {
+    fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         let map = ::rustler::types::map::map_new(env)
             .map_put(atoms::id().encode(env), self.id.encode(env)).ok().unwrap()
             .map_put(atoms::parent().encode(env), match self.parent {
@@ -299,7 +299,7 @@ mod atoms {
     }
 }
 
-pub fn flat_sink_to_term<'a>(env: NifEnv<'a>, sink: &FlatSink) -> NifTerm<'a> {
+pub fn flat_sink_to_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
     let nodes = sink.nodes.iter()
         .fold(::rustler::types::map::map_new(env), |acc, node| {
             acc.map_put(node.id.encode(env), node.encode(env)).ok().unwrap()

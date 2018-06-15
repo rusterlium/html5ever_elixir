@@ -1,8 +1,6 @@
 #[macro_use]
 extern crate rustler;
 #[macro_use]
-extern crate rustler_codegen;
-#[macro_use]
 extern crate lazy_static;
 extern crate tendril;
 extern crate scoped_pool;
@@ -12,8 +10,8 @@ extern crate markup5ever;
 
 use std::panic;
 
-use rustler::{NifEnv, NifTerm, NifResult, NifError, NifEncoder, NifDecoder};
-use rustler::types::binary::NifBinary;
+use rustler::{Env, Term, NifResult, Error, Encoder, Decoder};
+use rustler::types::binary::Binary;
 use rustler::env::OwnedEnv;
 
 use html5ever::rcdom::RcDom;
@@ -59,8 +57,8 @@ enum ErrorLevel {
     Some,
     All,
 }
-impl<'a> NifDecoder<'a> for ErrorLevel {
-    fn decode(term: NifTerm<'a>) -> NifResult<ErrorLevel> {
+impl<'a> Decoder<'a> for ErrorLevel {
+    fn decode(term: Term<'a>) -> NifResult<ErrorLevel> {
         if atoms::none() == term {
             Ok(ErrorLevel::None)
         } else if atoms::some() == term {
@@ -68,12 +66,12 @@ impl<'a> NifDecoder<'a> for ErrorLevel {
         } else if atoms::all() == term {
             Ok(ErrorLevel::All)
         } else {
-            Err(NifError::BadArg)
+            Err(Error::BadArg)
         }
     }
 }
 
-fn term_to_configs(term: NifTerm) -> NifResult<ParseOpts> {
+fn term_to_configs(term: Term) -> NifResult<ParseOpts> {
     if atoms::nil() == term {
         Ok(ParseOpts::default())
     } else {
@@ -113,7 +111,7 @@ lazy_static! {
     static ref POOL: scoped_pool::Pool = scoped_pool::Pool::new(4);
 }
 
-fn parse_async<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'a>> {
+fn parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     let mut owned_env = OwnedEnv::new();
 
     // Copies the term into the inner env. Since this term is normally a large
@@ -130,7 +128,7 @@ fn parse_async<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'
             // This should not really be done in user code. We (Rustler project)
             // need to find a better abstraction that eliminates this.
             match panic::catch_unwind(|| {
-                let binary: NifBinary = match input_term.load(inner_env).decode() {
+                let binary: Binary = match input_term.load(inner_env).decode() {
                     Ok(inner) => inner,
                     Err(_) => panic!("argument is not a binary"),
                 };
@@ -164,8 +162,8 @@ fn parse_async<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'
     Ok(atoms::ok().encode(env))
 }
 
-fn parse_sync<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'a>> {
-    let binary: NifBinary = args[0].decode()?;
+fn parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
+    let binary: Binary = args[0].decode()?;
     let sink = RcDom::default();
 
     // TODO: Use Parser.from_bytes instead?
@@ -179,8 +177,8 @@ fn parse_sync<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'a
     Ok((atoms::html5ever_nif_result(), atoms::ok(), result_term.unwrap()).encode(env))
 }
 
-fn flat_parse_sync<'a>(env: NifEnv<'a>, args: &[NifTerm<'a>]) -> NifResult<NifTerm<'a>> {
-    let binary: NifBinary = args[0].decode()?;
+fn flat_parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
+    let binary: Binary = args[0].decode()?;
     let sink = flat_dom::FlatSink::new();
 
     // TODO: Use Parser.from_bytes instead?
@@ -203,6 +201,6 @@ rustler_export_nifs!("Elixir.Html5ever.Native",
                      Some(on_load));
 
 
-fn on_load<'a>(_env: NifEnv<'a>, _load_info: NifTerm<'a>) -> bool {
+fn on_load<'a>(_env: Env<'a>, _load_info: Term<'a>) -> bool {
     true
 }

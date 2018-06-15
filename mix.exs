@@ -3,7 +3,7 @@ defmodule Html5ever.Mixfile do
 
   def project do
     [app: :html5ever,
-     version: "0.5.0",
+     version: "0.6.1",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -45,7 +45,7 @@ defmodule Html5ever.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:rustler, "~> 0.10.1"},
+    [{:rustler, "~> 0.17.0"},
      {:ex_doc, ">= 0.0.0", only: :dev}]
   end
 
