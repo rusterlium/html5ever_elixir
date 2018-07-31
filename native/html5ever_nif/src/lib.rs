@@ -2,30 +2,24 @@
 extern crate rustler;
 #[macro_use]
 extern crate lazy_static;
-extern crate tendril;
 extern crate scoped_pool;
+extern crate tendril;
 
 extern crate html5ever;
 extern crate markup5ever;
 
 use std::panic;
 
-use rustler::{Env, Term, NifResult, Error, Encoder, Decoder};
-use rustler::types::binary::Binary;
 use rustler::env::OwnedEnv;
+use rustler::types::binary::Binary;
+use rustler::{Decoder, Encoder, Env, Error, NifResult, Term};
 
 use html5ever::rcdom::RcDom;
-use html5ever::driver::ParseOpts;
-use html5ever::tokenizer::TokenizerOpts;
-use html5ever::tree_builder::TreeBuilderOpts;
-use html5ever::tree_builder::QuirksMode;
 use tendril::TendrilSink;
 
-use ::common::{ QNW, STW };
-
 mod common;
-mod rc_dom;
 mod flat_dom;
+mod rc_dom;
 
 mod atoms {
     rustler_atoms! {
@@ -33,17 +27,10 @@ mod atoms {
 
         atom ok;
         atom error;
-        atom nil;
         atom nif_panic;
 
         atom doctype;
         atom comment;
-
-        atom discard_bom;
-        atom scripting_enabled;
-        atom iframe_srcdoc;
-        atom drop_doctype;
-        atom error_level;
 
         atom none;
         atom some;
@@ -68,40 +55,6 @@ impl<'a> Decoder<'a> for ErrorLevel {
         } else {
             Err(Error::BadArg)
         }
-    }
-}
-
-fn term_to_configs(term: Term) -> NifResult<ParseOpts> {
-    if atoms::nil() == term {
-        Ok(ParseOpts::default())
-    } else {
-        let env = term.get_env();
-
-        let errors: ErrorLevel = term.map_get(atoms::error_level().to_term(env))?.decode()?;
-
-        let discard_bom: bool = term.map_get(atoms::discard_bom().to_term(env))?.decode()?;
-        let scripting_enabled: bool = term.map_get(atoms::scripting_enabled().to_term(env))?
-            .decode()?;
-        let iframe_srcdoc: bool = term.map_get(atoms::iframe_srcdoc().to_term(env))?.decode()?;
-        let drop_doctype: bool = term.map_get(atoms::drop_doctype().to_term(env))?.decode()?;
-
-        Ok(ParseOpts {
-            tokenizer: TokenizerOpts {
-                exact_errors: errors == ErrorLevel::All,
-                discard_bom: discard_bom,
-                profile: false,
-                initial_state: None,
-                last_start_tag_name: None,
-            },
-            tree_builder: TreeBuilderOpts {
-                exact_errors: errors == ErrorLevel::All,
-                scripting_enabled: scripting_enabled,
-                iframe_srcdoc: iframe_srcdoc,
-                drop_doctype: drop_doctype,
-                ignore_missing_rules: false,
-                quirks_mode: QuirksMode::NoQuirks,
-            },
-        })
     }
 }
 
@@ -140,7 +93,11 @@ fn parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
                 let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
 
                 let result_term = rc_dom::handle_to_term(inner_env, &result.document);
-                (atoms::html5ever_nif_result(), atoms::ok(), result_term.unwrap()).encode(inner_env)
+                (
+                    atoms::html5ever_nif_result(),
+                    atoms::ok(),
+                    result_term.unwrap(),
+                ).encode(inner_env)
             }) {
                 Ok(term) => term,
                 Err(err) => {
@@ -174,7 +131,11 @@ fn parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
 
     let result_term = rc_dom::handle_to_term(env, &result.document);
 
-    Ok((atoms::html5ever_nif_result(), atoms::ok(), result_term.unwrap()).encode(env))
+    Ok((
+        atoms::html5ever_nif_result(),
+        atoms::ok(),
+        result_term.unwrap(),
+    ).encode(env))
 }
 
 fn flat_parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
@@ -192,14 +153,15 @@ fn flat_parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     Ok((atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env))
 }
 
-rustler_export_nifs!("Elixir.Html5ever.Native",
-                     [
-                         ("parse_async", 1, parse_async),
-                         ("parse_sync", 1, parse_sync),
-                         ("flat_parse_sync", 1, flat_parse_sync)
-                     ],
-                     Some(on_load));
-
+rustler_export_nifs!(
+    "Elixir.Html5ever.Native",
+    [
+        ("parse_async", 1, parse_async),
+        ("parse_sync", 1, parse_sync),
+        ("flat_parse_sync", 1, flat_parse_sync)
+    ],
+    Some(on_load)
+);
 
 fn on_load<'a>(_env: Env<'a>, _load_info: Term<'a>) -> bool {
     true
