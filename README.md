@@ -10,7 +10,7 @@ The package can be installed by adding `html5ever` to your list of dependencies 
 
 ```elixir
 def deps do
-  [{:html5ever, "~> 0.2.0"}]
+  [{:html5ever, "~> 0.7.0"}]
 end
 ```
 
