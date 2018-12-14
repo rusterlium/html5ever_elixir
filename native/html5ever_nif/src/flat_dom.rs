@@ -157,6 +157,18 @@ impl TreeSink for FlatSink {
         self.node_mut(handle).parent = Some(*parent_id);
     }
 
+    fn append_based_on_parent_node(&mut self,
+                                   element: &Self::Handle,
+                                   prev_element: &Self::Handle,
+                                   child: NodeOrText<Self::Handle>) {
+        let has_parent = self.node(*element).parent.is_some();
+        if has_parent {
+            self.append_before_sibling(element, child);
+        } else {
+            self.append(prev_element, child);
+        }
+    }
+
     fn append_before_sibling(&mut self, sibling: &Self::Handle, new_node: NodeOrText<Self::Handle>) {
         let new_node_handle = node_or_text_to_node(self, new_node);
 
@@ -213,9 +225,9 @@ impl TreeSink for FlatSink {
         panic!("unsupported");
     }
 
-    fn has_parent_node(&self, handle: &Self::Handle) -> bool {
-        self.node(*handle).parent.is_some()
-    }
+    //fn has_parent_node(&self, handle: &Self::Handle) -> bool {
+    //    self.node(*handle).parent.is_some()
+    //}
 
     fn create_pi(&mut self, target: StrTendril, data: StrTendril) -> Self::Handle {
         self.make_node(NodeData::ProcessingInstruction {

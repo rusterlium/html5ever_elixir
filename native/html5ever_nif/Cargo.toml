@@ -14,9 +14,9 @@ rustler_codegen = "^0.18"
 #rustler = { path = "../../../Rustler/" }
 #rustler_codegen = { path = "../../../Rustler/rustler_codegen/" }
 
-html5ever = "0.16"
-markup5ever = "0.1"
+html5ever = "0.22"
+markup5ever = "0.7"
 
-tendril = "0.2"
-lazy_static = "0.2"
-scoped-pool = "1"
+tendril = "0.4"
+lazy_static = "1.2"
+scoped-pool = "1.0"
