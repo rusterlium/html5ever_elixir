@@ -1,6 +1,3 @@
-use ::html5ever;
-use ::markup5ever;
-
 use html5ever::{ QualName, Attribute };
 use html5ever::tree_builder::{ TreeSink, QuirksMode, NodeOrText, ElementFlags };
 use markup5ever::ExpandedName;
@@ -115,11 +112,11 @@ impl TreeSink for FlatSink {
     }
 
     // TODO: Log this or something
-    fn parse_error(&mut self, msg: Cow<'static, str>) {}
-    fn set_quirks_mode(&mut self, mode: QuirksMode) {}
+    fn parse_error(&mut self, _msg: Cow<'static, str>) {}
+    fn set_quirks_mode(&mut self, _mode: QuirksMode) {}
 
     fn get_document(&mut self) -> Self::Handle { NodeHandle(0) }
-    fn get_template_contents(&mut self, target: &Self::Handle) -> Self::Handle {
+    fn get_template_contents(&mut self, _target: &Self::Handle) -> Self::Handle {
         panic!("Templates not supported");
     }
 

@@ -1,7 +1,5 @@
 use ::rustler::{Env, Term, Encoder};
 use ::html5ever::rcdom::{Handle, NodeData};
-use ::html5ever::QualName;
-use ::tendril::StrTendril;
 
 use ::common::{ QNW, STW };
 
