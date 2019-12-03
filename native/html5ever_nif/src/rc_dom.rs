@@ -1,7 +1,7 @@
-use ::rustler::{Env, Term, Encoder};
-use ::html5ever::rcdom::{Handle, NodeData};
+use rustler::{Env, Term, Encoder};
+use html5ever::rcdom::{Handle, NodeData};
 
-use ::common::{ QNW, STW };
+use crate::common::{ QNW, STW };
 
 /// Takes a Handle from a RcDom, encodes it into a Term.
 /// This follows the mochiweb encoding scheme with two exceptions:
@@ -25,12 +25,12 @@ pub fn handle_to_term<'a>(env: Env<'a>, handle: &Handle) -> Option<Term<'a>> {
         NodeData::Document => Some(children()),
 
         NodeData::Doctype { ref name, ref public_id, ref system_id } => {
-            Some((::atoms::doctype(), STW(name), STW(public_id), STW(system_id)).encode(env))
+            Some((crate::atoms::doctype(), STW(name), STW(public_id), STW(system_id)).encode(env))
         }
 
         NodeData::Text { ref contents } => Some(STW(&*contents.borrow()).encode(env)),
 
-        NodeData::Comment { ref contents } => Some((::atoms::comment(), STW(contents)).encode(env)),
+        NodeData::Comment { ref contents } => Some((crate::atoms::comment(), STW(contents)).encode(env)),
 
         NodeData::Element { ref name, ref attrs, .. } => {
             let attribute_terms: Vec<Term<'a>> = attrs.borrow().iter()

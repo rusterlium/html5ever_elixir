@@ -1,18 +1,10 @@
-#[macro_use]
-extern crate rustler;
-#[macro_use]
-extern crate lazy_static;
-extern crate scoped_pool;
-extern crate tendril;
-
-extern crate html5ever;
-extern crate markup5ever;
-
 use std::panic;
+
+use lazy_static::lazy_static;
 
 use rustler::env::OwnedEnv;
 use rustler::types::binary::Binary;
-use rustler::{Decoder, Encoder, Env, Error, NifResult, Term};
+use rustler::{Decoder, Encoder, Env, Error, NifResult, Term, rustler_export_nifs};
 
 use html5ever::rcdom::RcDom;
 use tendril::TendrilSink;
@@ -22,7 +14,7 @@ mod flat_dom;
 mod rc_dom;
 
 mod atoms {
-    rustler_atoms! {
+    rustler::rustler_atoms! {
         atom html5ever_nif_result;
 
         atom ok;

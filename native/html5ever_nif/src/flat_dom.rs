@@ -6,8 +6,9 @@ use tendril::StrTendril;
 
 use std::borrow::Cow;
 
-use ::rustler::{ Env, Encoder, Term };
-use ::common::{ STW, QNW };
+use rustler::{ Env, Encoder, Term };
+
+use crate::common::{ STW, QNW };
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct NodeHandle(pub usize);
@@ -247,39 +248,39 @@ impl Encoder for NodeHandle {
 impl Encoder for Node {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         let map = ::rustler::types::map::map_new(env)
-            .map_put(atoms::id().encode(env), self.id.encode(env)).ok().unwrap()
-            .map_put(atoms::parent().encode(env), match self.parent {
+            .map_put(self::atoms::id().encode(env), self.id.encode(env)).ok().unwrap()
+            .map_put(self::atoms::parent().encode(env), match self.parent {
                 Some(handle) => handle.encode(env),
-                None => atoms::nil().encode(env),
+                None => self::atoms::nil().encode(env),
             }).ok().unwrap();
 
         match self.data {
             NodeData::Document => {
                 map
-                    .map_put(atoms::type_().encode(env), atoms::document().encode(env)).ok().unwrap()
+                    .map_put(self::atoms::type_().encode(env), self::atoms::document().encode(env)).ok().unwrap()
             }
             NodeData::Element { ref attrs, ref name, .. } => {
                 map
-                    .map_put(atoms::type_().encode(env), atoms::element().encode(env)).ok().unwrap()
-                    .map_put(atoms::children().encode(env), self.children.encode(env)).ok().unwrap()
-                    .map_put(atoms::name().encode(env), QNW(name).encode(env)).ok().unwrap()
-                    .map_put(atoms::attrs().encode(env), attrs.iter().map(|attr| {
+                    .map_put(self::atoms::type_().encode(env), self::atoms::element().encode(env)).ok().unwrap()
+                    .map_put(self::atoms::children().encode(env), self.children.encode(env)).ok().unwrap()
+                    .map_put(self::atoms::name().encode(env), QNW(name).encode(env)).ok().unwrap()
+                    .map_put(self::atoms::attrs().encode(env), attrs.iter().map(|attr| {
                         (QNW(&attr.name), STW(&attr.value))
                     }).collect::<Vec<_>>().encode(env)).ok().unwrap()
             }
             NodeData::Text { ref contents } => {
                 map
-                    .map_put(atoms::type_().encode(env), atoms::text().encode(env)).ok().unwrap()
-                    .map_put(atoms::contents().encode(env), STW(contents).encode(env)).ok().unwrap()
+                    .map_put(self::atoms::type_().encode(env), self::atoms::text().encode(env)).ok().unwrap()
+                    .map_put(self::atoms::contents().encode(env), STW(contents).encode(env)).ok().unwrap()
             }
             NodeData::DocType { .. } => {
                 map
-                    .map_put(atoms::type_().encode(env), atoms::doctype().encode(env)).ok().unwrap()
+                    .map_put(self::atoms::type_().encode(env), self::atoms::doctype().encode(env)).ok().unwrap()
             }
             NodeData::Comment { ref contents } => {
                 map
-                    .map_put(atoms::type_().encode(env), atoms::comment().encode(env)).ok().unwrap()
-                    .map_put(atoms::contents().encode(env), STW(contents).encode(env)).ok().unwrap()
+                    .map_put(self::atoms::type_().encode(env), self::atoms::comment().encode(env)).ok().unwrap()
+                    .map_put(self::atoms::contents().encode(env), STW(contents).encode(env)).ok().unwrap()
             }
             _ => unimplemented!(),
         }
@@ -287,7 +288,7 @@ impl Encoder for Node {
 }
 
 mod atoms {
-    rustler_atoms! {
+    rustler::rustler_atoms! {
         atom nil;
 
         atom type_ = "type";
@@ -310,11 +311,11 @@ mod atoms {
 
 pub fn flat_sink_to_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
     let nodes = sink.nodes.iter()
-        .fold(::rustler::types::map::map_new(env), |acc, node| {
+        .fold(rustler::types::map::map_new(env), |acc, node| {
             acc.map_put(node.id.encode(env), node.encode(env)).ok().unwrap()
         });
 
     ::rustler::types::map::map_new(env)
-        .map_put(atoms::nodes().encode(env), nodes).ok().unwrap()
-        .map_put(atoms::root().encode(env), sink.root.encode(env)).ok().unwrap()
+        .map_put(self::atoms::nodes().encode(env), nodes).ok().unwrap()
+        .map_put(self::atoms::root().encode(env), sink.root.encode(env)).ok().unwrap()
 }

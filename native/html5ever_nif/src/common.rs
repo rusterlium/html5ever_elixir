@@ -1,7 +1,7 @@
-use ::rustler::{Encoder, Env, Term};
+use rustler::{Encoder, Env, Term};
 
-use ::html5ever::QualName;
-use ::tendril::StrTendril;
+use html5ever::QualName;
+use tendril::StrTendril;
 
 // Zero-cost wrapper types which makes it possible to implement
 // Encoder for these externally defined types.
