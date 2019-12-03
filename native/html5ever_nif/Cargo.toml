@@ -9,10 +9,7 @@ path = "src/lib.rs"
 crate-type = ["dylib"]
 
 [dependencies]
-rustler = "^0.18"
-rustler_codegen = "^0.18"
-#rustler = { path = "../../../Rustler/" }
-#rustler_codegen = { path = "../../../Rustler/rustler_codegen/" }
+rustler = "^0.21"
 
 html5ever = "0.22"
 markup5ever = "0.7"
