@@ -17,9 +17,8 @@ defmodule Html5ever do
     flat_parse_sync(html)
   end
 
-  defp parse_async(html) do
-    Html5ever.Native.parse_async(html)
-    receive do
+  defp parse_sync(html) do
+    case Html5ever.Native.parse_sync(html) do
       {:html5ever_nif_result, :ok, result} ->
         {:ok, result}
       {:html5ever_nif_result, :error, err} ->
@@ -27,8 +26,9 @@ defmodule Html5ever do
     end
   end
 
-  defp parse_sync(html) do
-    case Html5ever.Native.parse_sync(html) do
+  defp parse_async(html) do
+    :ok = Html5ever.Native.parse_async(html)
+    receive do
       {:html5ever_nif_result, :ok, result} ->
         {:ok, result}
       {:html5ever_nif_result, :error, err} ->
@@ -46,7 +46,8 @@ defmodule Html5ever do
   end
 
   defp flat_parse_async(html) do
-    case Html5ever.Native.flat_parse_sync(html) do
+    :ok = Html5ever.Native.flat_parse_async(html)
+    receive do
       {:html5ever_nif_result, :ok, result} ->
         {:ok, result}
       {:html5ever_nif_result, :error, err} ->

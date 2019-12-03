@@ -6,12 +6,11 @@ use rustler::env::OwnedEnv;
 use rustler::types::binary::Binary;
 use rustler::{Decoder, Encoder, Env, Error, NifResult, Term, rustler_export_nifs};
 
-use html5ever::rcdom::RcDom;
+//use html5ever::rcdom::RcDom;
 use tendril::TendrilSink;
 
 mod common;
 mod flat_dom;
-mod rc_dom;
 
 mod atoms {
     rustler::rustler_atoms! {
@@ -56,6 +55,21 @@ lazy_static! {
     static ref POOL: scoped_pool::Pool = scoped_pool::Pool::new(4);
 }
 
+fn parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
+    let binary: Binary = args[0].decode()?;
+    let sink = flat_dom::FlatSink::new();
+
+    // TODO: Use Parser.from_bytes instead?
+    let parser = html5ever::parse_document(sink, Default::default());
+    let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
+
+    // std::thread::sleep(std::time::Duration::from_millis(10));
+
+    let result_term = flat_dom::flat_sink_to_rec_term(env, &result);
+
+    Ok((atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env))
+}
+
 fn parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     let mut owned_env = OwnedEnv::new();
 
@@ -78,17 +92,17 @@ fn parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
                     Err(_) => panic!("argument is not a binary"),
                 };
 
-                let sink = RcDom::default();
+                let sink = flat_dom::FlatSink::new();
 
                 // TODO: Use Parser.from_bytes instead?
                 let parser = html5ever::parse_document(sink, Default::default());
                 let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
 
-                let result_term = rc_dom::handle_to_term(inner_env, &result.document);
+                let result_term = flat_dom::flat_sink_to_rec_term(inner_env, &result);
                 (
                     atoms::html5ever_nif_result(),
                     atoms::ok(),
-                    result_term.unwrap(),
+                    result_term,
                 ).encode(inner_env)
             }) {
                 Ok(term) => term,
@@ -111,25 +125,6 @@ fn parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     Ok(atoms::ok().encode(env))
 }
 
-fn parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
-    let binary: Binary = args[0].decode()?;
-    let sink = RcDom::default();
-
-    // TODO: Use Parser.from_bytes instead?
-    let parser = html5ever::parse_document(sink, Default::default());
-    let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
-
-    // std::thread::sleep(std::time::Duration::from_millis(10));
-
-    let result_term = rc_dom::handle_to_term(env, &result.document);
-
-    Ok((
-        atoms::html5ever_nif_result(),
-        atoms::ok(),
-        result_term.unwrap(),
-    ).encode(env))
-}
-
 fn flat_parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     let binary: Binary = args[0].decode()?;
     let sink = flat_dom::FlatSink::new();
@@ -140,17 +135,73 @@ fn flat_parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
 
     // std::thread::sleep(std::time::Duration::from_millis(10));
 
-    let result_term = flat_dom::flat_sink_to_term(env, &result);
+    let result_term = flat_dom::flat_sink_to_flat_term(env, &result);
 
     Ok((atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env))
+}
+
+fn flat_parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
+    let mut owned_env = OwnedEnv::new();
+
+    // Copies the term into the inner env. Since this term is normally a large
+    // binary term, copying it over should be cheap, since the binary will be
+    // refcounted within the BEAM.
+    let input_term = owned_env.save(args[0]);
+
+    let return_pid = env.pid();
+
+    // let config = term_to_configs(args[1]);
+
+    POOL.spawn(move || {
+        owned_env.send_and_clear(&return_pid, |inner_env| {
+            // This should not really be done in user code. We (Rustler project)
+            // need to find a better abstraction that eliminates this.
+            match panic::catch_unwind(|| {
+                let binary: Binary = match input_term.load(inner_env).decode() {
+                    Ok(inner) => inner,
+                    Err(_) => panic!("argument is not a binary"),
+                };
+
+                let sink = flat_dom::FlatSink::new();
+
+                // TODO: Use Parser.from_bytes instead?
+                let parser = html5ever::parse_document(sink, Default::default());
+                let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
+
+                let result_term = flat_dom::flat_sink_to_flat_term(inner_env, &result);
+                (
+                    atoms::html5ever_nif_result(),
+                    atoms::ok(),
+                    result_term,
+                ).encode(inner_env)
+            }) {
+                Ok(term) => term,
+                Err(err) => {
+                    // Try to extract a panic reason and return that. If this
+                    // fails, fail generically.
+                    let reason = if let Some(s) = err.downcast_ref::<String>() {
+                        s.encode(inner_env)
+                    } else if let Some(&s) = err.downcast_ref::<&'static str>() {
+                        s.encode(inner_env)
+                    } else {
+                        atoms::nif_panic().encode(inner_env)
+                    };
+                    (atoms::html5ever_nif_result(), atoms::error(), reason).encode(inner_env)
+                }
+            }
+        });
+    });
+
+    Ok(atoms::ok().encode(env))
 }
 
 rustler_export_nifs!(
     "Elixir.Html5ever.Native",
     [
-        ("parse_async", 1, parse_async),
         ("parse_sync", 1, parse_sync),
-        ("flat_parse_sync", 1, flat_parse_sync)
+        ("parse_async", 1, parse_async),
+        ("flat_parse_sync", 1, flat_parse_sync),
+        ("flat_parse_async", 1, flat_parse_async)
     ],
     Some(on_load)
 );

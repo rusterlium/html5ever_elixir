@@ -31,7 +31,7 @@ impl Node {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum NodeData{
     Document,
     DocType {
@@ -75,6 +75,10 @@ impl FlatSink {
         sink.nodes.push(Node::new(0, NodeData::Document));
 
         sink
+    }
+
+    pub fn root(&self) -> NodeHandle {
+        self.root
     }
 
     pub fn node_mut<'a>(&'a mut self, handle: NodeHandle) -> &'a mut Node {
@@ -309,7 +313,7 @@ mod atoms {
     }
 }
 
-pub fn flat_sink_to_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
+pub fn flat_sink_to_flat_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
     let nodes = sink.nodes.iter()
         .fold(rustler::types::map::map_new(env), |acc, node| {
             acc.map_put(node.id.encode(env), node.encode(env)).ok().unwrap()
@@ -319,3 +323,89 @@ pub fn flat_sink_to_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
         .map_put(self::atoms::nodes().encode(env), nodes).ok().unwrap()
         .map_put(self::atoms::root().encode(env), sink.root.encode(env)).ok().unwrap()
 }
+
+struct RecState<'a> {
+    node: NodeHandle,
+    child_n: usize,
+
+    children: Vec<Term<'a>>,
+}
+
+pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
+    let mut stack: Vec<RecState> = vec![
+        RecState {
+            node: sink.root(),
+            child_n: 0,
+            children: Vec::new(),
+        },
+    ];
+
+    loop {
+        let mut top = stack.pop().unwrap();
+        let top_node = &sink.nodes[top.node.0];
+
+        if let Some(child_node) = top_node.children.get(top.child_n) {
+            // If we find another child, we recurse downwards
+
+            let child = RecState {
+                node: *child_node,
+                child_n: 0,
+                children: Vec::new(),
+            };
+            debug_assert!(sink.nodes[child_node.0].data != NodeData::Document);
+
+            top.child_n += 1;
+            stack.push(top);
+            stack.push(child);
+            continue;
+        } else {
+            // If there are no more children, we add the child to the parent
+            // (or we return if we are the root)
+
+            let term;
+
+            match &top_node.data {
+                NodeData::Document => {
+                    let term = top.children.encode(env);
+                    assert_eq!(stack.len(), 0);
+                    return term;
+                },
+                NodeData::DocType { name, public_id, system_id }  => {
+                    assert!(stack.len() > 0);
+                    assert!(top.children.len() == 0);
+
+                    term = (
+                        self::atoms::doctype(),
+                        STW(name),
+                        STW(public_id),
+                        STW(system_id),
+                    ).encode(env);
+                },
+                NodeData::Element { attrs, name, .. } => {
+                    assert!(stack.len() > 0);
+
+                    let attribute_terms: Vec<Term<'a>> = attrs.iter()
+                        .map(|a| (QNW(&a.name), STW(&a.value)).encode(env))
+                        .collect();
+                    term = (QNW(name), attribute_terms, top.children).encode(env);
+                },
+                NodeData::Text { contents } => {
+                    term = STW(contents).encode(env);
+                },
+                NodeData::Comment { .. } => continue,
+                _ => unimplemented!("{:?}", top_node),
+            }
+
+            stack.last_mut().unwrap().children.push(term);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
