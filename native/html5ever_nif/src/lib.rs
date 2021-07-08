@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 
 use rustler::env::OwnedEnv;
 use rustler::types::binary::Binary;
-use rustler::{Decoder, Encoder, Env, Error, NifResult, Term, rustler_export_nifs};
+use rustler::{rustler_export_nifs, Decoder, Encoder, Env, Error, NifResult, Term};
 
 //use html5ever::rcdom::RcDom;
 use tendril::TendrilSink;
@@ -99,11 +99,7 @@ fn parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
                 let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
 
                 let result_term = flat_dom::flat_sink_to_rec_term(inner_env, &result);
-                (
-                    atoms::html5ever_nif_result(),
-                    atoms::ok(),
-                    result_term,
-                ).encode(inner_env)
+                (atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(inner_env)
             }) {
                 Ok(term) => term,
                 Err(err) => {
@@ -169,11 +165,7 @@ fn flat_parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> 
                 let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
 
                 let result_term = flat_dom::flat_sink_to_flat_term(inner_env, &result);
-                (
-                    atoms::html5ever_nif_result(),
-                    atoms::ok(),
-                    result_term,
-                ).encode(inner_env)
+                (atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(inner_env)
             }) {
                 Ok(term) => term,
                 Err(err) => {
