@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 
 use rustler::env::OwnedEnv;
 use rustler::types::binary::Binary;
-use rustler::{rustler_export_nifs, Decoder, Encoder, Env, Error, NifResult, Term};
+use rustler::{Decoder, Encoder, Env, Error, NifResult, Term};
 
 //use html5ever::rcdom::RcDom;
 use tendril::TendrilSink;
@@ -55,8 +55,8 @@ lazy_static! {
     static ref POOL: scoped_pool::Pool = scoped_pool::Pool::new(4);
 }
 
-fn parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
-    let binary: Binary = args[0].decode()?;
+#[rustler::nif]
+fn parse_sync<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
     let sink = flat_dom::FlatSink::new();
 
     // TODO: Use Parser.from_bytes instead?
@@ -67,16 +67,17 @@ fn parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
 
     let result_term = flat_dom::flat_sink_to_rec_term(env, &result);
 
-    Ok((atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env))
+    (atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env)
 }
 
-fn parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
+#[rustler::nif]
+fn parse_async<'a>(env: Env<'a>, term: Term) -> Term<'a> {
     let mut owned_env = OwnedEnv::new();
 
     // Copies the term into the inner env. Since this term is normally a large
     // binary term, copying it over should be cheap, since the binary will be
     // refcounted within the BEAM.
-    let input_term = owned_env.save(args[0]);
+    let input_term = owned_env.save(term);
 
     let return_pid = env.pid();
 
@@ -118,11 +119,11 @@ fn parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
         });
     });
 
-    Ok(atoms::ok().encode(env))
+    atoms::ok().encode(env)
 }
 
-fn flat_parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
-    let binary: Binary = args[0].decode()?;
+#[rustler::nif]
+fn flat_parse_sync<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
     let sink = flat_dom::FlatSink::new();
 
     // TODO: Use Parser.from_bytes instead?
@@ -133,16 +134,17 @@ fn flat_parse_sync<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
 
     let result_term = flat_dom::flat_sink_to_flat_term(env, &result);
 
-    Ok((atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env))
+    (atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env)
 }
 
-fn flat_parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
+#[rustler::nif]
+fn flat_parse_async<'a>(env: Env<'a>, term: Term) -> Term<'a> {
     let mut owned_env = OwnedEnv::new();
 
     // Copies the term into the inner env. Since this term is normally a large
     // binary term, copying it over should be cheap, since the binary will be
     // refcounted within the BEAM.
-    let input_term = owned_env.save(args[0]);
+    let input_term = owned_env.save(term);
 
     let return_pid = env.pid();
 
@@ -184,18 +186,13 @@ fn flat_parse_async<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> 
         });
     });
 
-    Ok(atoms::ok().encode(env))
+    atoms::ok().encode(env)
 }
 
-rustler_export_nifs!(
+rustler::init!(
     "Elixir.Html5ever.Native",
-    [
-        ("parse_sync", 1, parse_sync),
-        ("parse_async", 1, parse_async),
-        ("flat_parse_sync", 1, flat_parse_sync),
-        ("flat_parse_async", 1, flat_parse_async)
-    ],
-    Some(on_load)
+    [parse_sync, parse_async, flat_parse_sync, flat_parse_async],
+    load = on_load
 );
 
 fn on_load<'a>(_env: Env<'a>, _load_info: Term<'a>) -> bool {
