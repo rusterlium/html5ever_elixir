@@ -3,7 +3,7 @@ defmodule NifNotLoadedError do
 end
 
 defmodule Html5ever.Native do
-  use Rustler, otp_app: :html5ever, crate: "html5ever_nif"
+  use Rustler, otp_app: :html5ever, crate: "html5ever_nif", mode: :release
 
   def parse_sync(_binary), do: err()
   def parse_async(_binary), do: err()
@@ -11,6 +11,6 @@ defmodule Html5ever.Native do
   def flat_parse_async(_binary), do: err()
 
   defp err() do
-    throw NifNotLoadedError
+    throw(NifNotLoadedError)
   end
 end
