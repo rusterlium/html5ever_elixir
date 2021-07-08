@@ -13,19 +13,19 @@ mod common;
 mod flat_dom;
 
 mod atoms {
-    rustler::rustler_atoms! {
-        atom html5ever_nif_result;
+    rustler::atoms! {
+        html5ever_nif_result,
 
-        atom ok;
-        atom error;
-        atom nif_panic;
+        ok,
+        error,
+        nif_panic,
 
-        atom doctype;
-        atom comment;
+        doctype,
+        comment,
 
-        atom none;
-        atom some;
-        atom all;
+        none,
+        some,
+        all,
     }
 }
 
