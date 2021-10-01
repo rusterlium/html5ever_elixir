@@ -58,7 +58,7 @@ defmodule Html5ever.Mixfile do
   defp package do
     [
       files: ["lib", "native", "mix.exs", "README.md"],
-      maintainers: ["hansihe"],
+      maintainers: ["hansihe", "philip"],
       licenses: ["MIT", "Apache-2.0"],
       links: %{"GitHub" => "https://github.com/hansihe/html5ever_elixir"},
     ]
