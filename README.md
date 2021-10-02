@@ -1,6 +1,8 @@
 # Html5ever binding for Elixir
 
-NIF binding of html5ever using [rustler](https://github.com/hansihe/rustler).
+[![CI](https://github.com/rusterlium/html5ever_elixir/actions/workflows/ci.yml/badge.svg)](https://github.com/rusterlium/html5ever_elixir/actions/workflows/ci.yml)
+
+NIF binding of [html5ever](https://github.com/servo/html5ever) using [rustler](https://github.com/rusterlium/rustler).
 
 It is currently functional, but missing some features and optimization.
 
