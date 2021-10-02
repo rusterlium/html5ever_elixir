@@ -1,53 +1,49 @@
 defmodule Html5ever.Mixfile do
   use Mix.Project
 
+  @version "0.9.0-dev"
+  @repo_url "https://github.com/rusterlium/html5ever_elixir"
+
   def project do
-    [app: :html5ever,
-     version: "0.9.0",
-     elixir: "~> 1.4",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     compilers: Mix.compilers(),
-     deps: deps(),
-     description: description(),
-     package: package()]
+    [
+      app: :html5ever,
+      version: @version,
+      elixir: "~> 1.4",
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      compilers: Mix.compilers(),
+      deps: deps(),
+      docs: docs(),
+      description: "NIF binding of html5ever using Rustler",
+      package: package()
+    ]
   end
 
-  # Configuration for the OTP application
-  #
-  # Type "mix help compile.app" for more information
   def application do
-    # Specify extra applications you'll use from Erlang/Elixir
     [extra_applications: [:logger]]
   end
 
-  # Dependencies can be Hex packages:
-  #
-  #   {:my_dep, "~> 0.3.0"}
-  #
-  # Or git/path repositories:
-  #
-  #   {:my_dep, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
-  #
-  # Type "mix help deps" for more examples and options
   defp deps do
-    [{:rustler, "~> 0.22.0"},
-     {:ex_doc, ">= 0.0.0", only: :dev}]
+    [
+      {:rustler, "~> 0.22.0"},
+      {:ex_doc, ">= 0.0.0", only: :dev}
+    ]
   end
 
-  defp description do
-    """
-    NIF binding of html5ever using rustler.
-    """
+  defp docs do
+    [
+      main: "Html5ever",
+      source_ref: "v#{@version}",
+      source_url: @repo_url
+    ]
   end
 
   defp package do
     [
-      files: ["lib", "native", "mix.exs", "README.md"],
+      files: ["lib", "native", "mix.exs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"],
       maintainers: ["hansihe", "philip"],
       licenses: ["MIT", "Apache-2.0"],
-      links: %{"GitHub" => "https://github.com/hansihe/html5ever_elixir"},
+      links: %{"GitHub" => @repo_url}
     ]
   end
-
 end
