@@ -3,28 +3,14 @@ defmodule Html5ever.Mixfile do
 
   def project do
     [app: :html5ever,
-     version: "0.7.0",
+     version: "0.9.0",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     compilers: [:rustler] ++ Mix.compilers(),
-     rustler_crates: rustler_crates(),
+     compilers: Mix.compilers(),
      deps: deps(),
      description: description(),
      package: package()]
-  end
-
-  def rustler_crates do
-    [
-      html5ever_nif: [
-        path: "native/html5ever_nif",
-        cargo: :system,
-        default_features: false,
-        features: [],
-        mode: :release,
-        # mode: (if Mix.env == :prod, do: :release, else: :debug),
-      ]
-    ]
   end
 
   # Configuration for the OTP application
@@ -45,7 +31,7 @@ defmodule Html5ever.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:rustler, "~> 0.21.0"},
+    [{:rustler, "~> 0.22.0"},
      {:ex_doc, ">= 0.0.0", only: :dev}]
   end
 

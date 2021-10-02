@@ -292,24 +292,24 @@ impl Encoder for Node {
 }
 
 mod atoms {
-    rustler::rustler_atoms! {
-        atom nil;
+    rustler::atoms! {
+        nil,
 
-        atom type_ = "type";
-        atom document;
-        atom element;
-        atom text;
-        atom doctype;
-        atom comment;
+        type_ = "type",
+        document,
+        element,
+        text,
+        doctype,
+        comment,
 
-        atom name;
-        atom nodes;
-        atom root;
-        atom id;
-        atom parent;
-        atom children;
-        atom contents;
-        atom attrs;
+        name,
+        nodes,
+        root,
+        id,
+        parent,
+        children,
+        contents,
+        attrs,
     }
 }
 
