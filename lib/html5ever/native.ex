@@ -1,4 +1,8 @@
 defmodule Html5ever.Native do
+  @moduledoc false
+
+  # This module will be replaced by the NIF module after
+  # loaded. It throws an error in case the NIF can't be loaded.
   use Rustler, otp_app: :html5ever, crate: "html5ever_nif", mode: :release
 
   def parse_sync(_binary), do: err()

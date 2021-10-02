@@ -6,6 +6,8 @@ defmodule Html5ever do
   @doc """
   Parses an HTML document from a string.
 
+  This returns a list of tuples representing the HTML tree.
+
   ## Example
 
       iex> Html5ever.parse("<!doctype html><html><body><h1>Hello world</h1></body></html>")
@@ -25,7 +27,9 @@ defmodule Html5ever do
   end
 
   @doc """
-  Parses an HTML document from a string returning a map.
+  Parses an HTML document from a string and returns a map.
+
+  The map contains the document structure.
 
   ## Example
 
