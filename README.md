@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/rusterlium/html5ever_elixir/actions/workflows/ci.yml/badge.svg)](https://github.com/rusterlium/html5ever_elixir/actions/workflows/ci.yml)
 
-NIF binding of [html5ever](https://github.com/servo/html5ever) using [rustler](https://github.com/rusterlium/rustler).
+NIF binding of [html5ever](https://github.com/servo/html5ever) using [Rustler](https://github.com/rusterlium/rustler).
 
-It is currently functional, but missing some features and optimization.
+It is currently functional with basic features.
 
 ## Installation
 
@@ -12,7 +12,7 @@ The package can be installed by adding `html5ever` to your list of dependencies 
 
 ```elixir
 def deps do
-  [{:html5ever, "~> 0.7.0"}]
+  [{:html5ever, "~> 0.9.0"}]
 end
 ```
 
