@@ -16,6 +16,10 @@ def deps do
 end
 ```
 
+By default you don't need Rust installed because the lib will try to download
+a precompiled NIF file. In case you want to force compilation set the
+`HTML5EVER_BUILD` env var to `true` or `1`.
+
 ## License
 
 Licensed under either of
