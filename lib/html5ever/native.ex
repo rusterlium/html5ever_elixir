@@ -27,7 +27,7 @@ defmodule Html5ever.Native do
 
         {:error, error} ->
           error =
-            "Error while downloading precompiled NIF: #{error}. Set HTML5EVER_BUILD=1 to compile the NIF from scratch"
+            "Error while downloading precompiled NIF: #{error}\n\nSet HTML5EVER_BUILD=1 env var to compile the NIF from scratch. You can also configure this application to force compilation:\n\n    config :html5ever, Html5ever.Native, skip_compilation?: false\n"
 
           if Mix.env() == :prod do
             raise error

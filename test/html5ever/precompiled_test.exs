@@ -58,7 +58,7 @@ defmodule Html5ever.PrecompiledTest do
     }
 
     error_message =
-      "precompiled NIF is not available for this target: \"i686-unknown-linux-gnu\". The available targets are:\n - aarch64-apple-darwin\n - x86_64-apple-darwin\n - x86_64-unknown-linux-gnu\n - x86_64-unknown-linux-musl\n - arm-unknown-linux-gnueabihf\n - x86_64-pc-windows-msvc\n - x86_64-pc-windows-gnu"
+      "precompiled NIF is not available for this target: \"i686-unknown-linux-gnu\".\nThe available targets are:\n - aarch64-apple-darwin\n - x86_64-apple-darwin\n - x86_64-unknown-linux-gnu\n - x86_64-unknown-linux-musl\n - arm-unknown-linux-gnueabihf\n - x86_64-pc-windows-msvc\n - x86_64-pc-windows-gnu"
 
     assert {:error, ^error_message} = Precompiled.target(config)
   end

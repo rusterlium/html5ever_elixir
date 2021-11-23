@@ -63,11 +63,11 @@ defmodule Html5ever.Precompiled do
     cond do
       arch_os not in @available_targets ->
         {:error,
-         "precompiled NIF is not available for this target: #{inspect(arch_os)}. The available targets are:\n - #{Enum.join(@available_targets, "\n - ")}"}
+         "precompiled NIF is not available for this target: #{inspect(arch_os)}.\nThe available targets are:\n - #{Enum.join(@available_targets, "\n - ")}"}
 
       config.nif_version not in @available_nif_versions ->
         {:error,
-         "precompiled NIF is not available for this NIF version: #{inspect(config.nif_version)}. The available NIF versions are:\n - #{Enum.join(@available_nif_versions, "\n - ")}"}
+         "precompiled NIF is not available for this NIF version: #{inspect(config.nif_version)}.\nThe available NIF versions are:\n - #{Enum.join(@available_nif_versions, "\n - ")}"}
 
       true ->
         {:ok, "nif-#{config.nif_version}-#{arch_os}"}
