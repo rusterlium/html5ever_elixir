@@ -77,26 +77,47 @@ defmodule Html5ever.Precompiled do
   defp target_config do
     current_nif_version = :erlang.system_info(:nif_version) |> List.to_string()
 
+    nif_version =
+      case find_compatible_nif_version(current_nif_version, @available_nif_versions) do
+        {:ok, vsn} ->
+          vsn
+
+        :error ->
+          # In case of error, use the current so we can tell the user.
+          current_nif_version
+      end
+
     %{
       os_type: :os.type(),
       system_arch: system_arch(),
       word_size: :erlang.system_info(:wordsize),
-      nif_version: find_compatible_nif_version(current_nif_version, @available_nif_versions)
+      nif_version: nif_version
     }
   end
 
   # In case one is using this lib in a newer OTP version, we try to
   # find the latest compatible NIF version.
-  defp find_compatible_nif_version(vsn, available) do
+  def find_compatible_nif_version(vsn, available) do
     if vsn in available do
-      vsn
+      {:ok, vsn}
     else
-      [major | _] = String.split(vsn, ".")
+      [major, minor | _] = parse_version(vsn)
 
       available
-      |> Enum.filter(fn vsn -> String.starts_with?(vsn, major <> ".") end)
-      |> Enum.max_by(fn vsn -> vsn |> String.split(".") |> Enum.map(&String.to_integer/1) end)
+      |> Enum.map(&parse_version/1)
+      |> Enum.filter(fn
+        [^major, available_minor | _] when available_minor <= minor -> true
+        [_ | _] -> false
+      end)
+      |> case do
+        [] -> :error
+        match -> {:ok, match |> Enum.max() |> Enum.join(".")}
+      end
     end
+  end
+
+  defp parse_version(vsn) do
+    vsn |> String.split(".") |> Enum.map(&String.to_integer/1)
   end
 
   # Returns a map with `:arch`, `:vendor`, `:os` and maybe `:abi`.

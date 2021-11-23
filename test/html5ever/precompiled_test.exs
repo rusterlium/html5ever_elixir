@@ -62,4 +62,20 @@ defmodule Html5ever.PrecompiledTest do
 
     assert {:error, ^error_message} = Precompiled.target(config)
   end
+
+  test "find_compatible_nif_version/2" do
+    available = ~w(2.14 2.15 2.16)
+
+    assert Precompiled.find_compatible_nif_version("2.14", available) == {:ok, "2.14"}
+    assert Precompiled.find_compatible_nif_version("2.15", available) == {:ok, "2.15"}
+    assert Precompiled.find_compatible_nif_version("2.16", available) == {:ok, "2.16"}
+    assert Precompiled.find_compatible_nif_version("2.17", available) == {:ok, "2.16"}
+    assert Precompiled.find_compatible_nif_version("2.13", available) == :error
+    assert Precompiled.find_compatible_nif_version("3.0", available) == :error
+    assert Precompiled.find_compatible_nif_version("1.0", available) == :error
+
+    assert Precompiled.find_compatible_nif_version("2.14", ["2.14"]) == {:ok, "2.14"}
+    assert Precompiled.find_compatible_nif_version("2.17", ["2.14"]) == {:ok, "2.14"}
+    assert Precompiled.find_compatible_nif_version("2.13", ["2.14"]) == :error
+  end
 end
