@@ -16,9 +16,14 @@ def deps do
 end
 ```
 
-By default you don't need Rust installed because the lib will try to download
+By default **you don't need Rust installed** because the lib will try to download
 a precompiled NIF file. In case you want to force compilation set the
-`HTML5EVER_BUILD` env var to `true` or `1`.
+`HTML5EVER_BUILD` environment variable to `true` or `1`. Alternatively you can also set the
+application env `:skip_compilation?` to `false` in order to force the build:
+
+```elixir
+config :html5ever, Html5ever.Native, skip_compilation?: false
+```
 
 ## License
 
