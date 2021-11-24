@@ -7,11 +7,10 @@ defmodule Html5ever.Native do
   # @github_url mix_config[:package][:links]["GitHub"]
 
   rustler_opts = [otp_app: :html5ever, crate: "html5ever_nif", mode: :release]
-  env_config = Application.get_env(rustler_opts[:otp_app], __MODULE__, [])
+  env_config = Application.get_env(rustler_opts[:otp_app], Html5ever, [])
 
   opts =
-    if System.get_env("HTML5EVER_BUILD") in ["1", "true"] or
-         env_config[:skip_compilation?] === false do
+    if System.get_env("HTML5EVER_BUILD") in ["1", "true"] or env_config[:build_from_source] do
       rustler_opts
     else
       case Html5ever.Precompiled.download_or_reuse_nif_file(
@@ -27,7 +26,7 @@ defmodule Html5ever.Native do
 
         {:error, error} ->
           error =
-            "Error while downloading precompiled NIF: #{error}\n\nSet HTML5EVER_BUILD=1 env var to compile the NIF from scratch. You can also configure this application to force compilation:\n\n    config :html5ever, Html5ever.Native, skip_compilation?: false\n"
+            "Error while downloading precompiled NIF: #{error}\n\nSet HTML5EVER_BUILD=1 env var to compile the NIF from scratch. You can also configure this application to force compilation:\n\n    config :html5ever, Html5ever, build_from_source: true\n"
 
           if Mix.env() == :prod do
             raise error
