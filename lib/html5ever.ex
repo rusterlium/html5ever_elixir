@@ -1,15 +1,25 @@
 defmodule Html5ever do
   @moduledoc """
-  The html5ever is an HTML parser written in Rust.
+  This is an HTML parser written in Rust.
+
+  The project provides a NIF - Native Implemented Function.
+  It works on top of a parser of the same name from the Servo
+  project. See: [https://github.com/servo/html5ever](https://github.com/servo/html5ever).
 
   By default this lib will try to use a precompiled NIF
   from the GitHub releases page. This way you don't need
   to have the Rust toolchain installed.
-  In case no precompiled file is found an error is raised.
+  In case no precompiled file is found and the Mix env is
+  production then an error is raised.
 
   You can force the precompilation to occur by setting the
   value of the `HTML5EVER_BUILD` environment variable to
-  "true" or "1".
+  "true" or "1". Alternatively you can also set the application
+  env `:build_from_source` to `true` in order to force the build:
+
+      config :html5ever, Html5ever, build_from_source: true
+
+  This project is possible thanks to [Rustler](https://hexdocs.pm/rustler).
   """
 
   @doc """
