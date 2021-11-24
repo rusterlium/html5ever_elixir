@@ -20,12 +20,13 @@ defmodule Html5ever.Mixfile do
   end
 
   def application do
-    [extra_applications: [:logger]]
+    [extra_applications: [:logger, :inets, :public_key]]
   end
 
   defp deps do
     [
       {:rustler, "~> 0.22.0"},
+      {:castore, "~> 0.1"},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end

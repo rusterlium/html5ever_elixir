@@ -1,6 +1,15 @@
 defmodule Html5ever do
   @moduledoc """
   The html5ever is an HTML parser written in Rust.
+
+  By default this lib will try to use a precompiled NIF
+  from the GitHub releases page. This way you don't need
+  to have the Rust toolchain installed.
+  In case no precompiled file is found an error is raised.
+
+  You can force the precompilation to occur by setting the
+  value of the `HTML5EVER_BUILD` environment variable to
+  "true" or "1".
   """
 
   @doc """

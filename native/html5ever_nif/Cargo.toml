@@ -7,10 +7,10 @@ edition = "2018"
 [lib]
 name = "html5ever_nif"
 path = "src/lib.rs"
-crate-type = ["dylib"]
+crate-type = ["cdylib"]
 
 [dependencies]
-rustler = "^0.22"
+rustler = { git = "https://github.com/rusterlium/rustler" }
 
 html5ever = "0.25"
 markup5ever = "0.10"
