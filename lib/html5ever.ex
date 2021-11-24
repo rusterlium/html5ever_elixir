@@ -3,8 +3,8 @@ defmodule Html5ever do
   This is an HTML parser written in Rust.
 
   The project provides a NIF - Native Implemented Function.
-  It works on top of a parser of the same name from the Servo
-  project. See: [https://github.com/servo/html5ever](https://github.com/servo/html5ever).
+  It works on top of [a parser of the same name](https://github.com/servo/html5ever)
+  from the Servo project.
 
   By default this lib will try to use a precompiled NIF
   from the GitHub releases page. This way you don't need
@@ -12,7 +12,7 @@ defmodule Html5ever do
   In case no precompiled file is found and the Mix env is
   production then an error is raised.
 
-  You can force the precompilation to occur by setting the
+  You can force the compilation to occur by setting the
   value of the `HTML5EVER_BUILD` environment variable to
   "true" or "1". Alternatively you can also set the application
   env `:build_from_source` to `true` in order to force the build:

@@ -1,7 +1,7 @@
 defmodule Html5ever.Mixfile do
   use Mix.Project
 
-  @version "0.9.0"
+  @version "0.10.0"
   @repo_url "https://github.com/rusterlium/html5ever_elixir"
 
   def project do
@@ -34,6 +34,8 @@ defmodule Html5ever.Mixfile do
   defp docs do
     [
       main: "Html5ever",
+      extras: ["CHANGELOG.md"],
+      skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       source_ref: "v#{@version}",
       source_url: @repo_url
     ]
@@ -41,7 +43,15 @@ defmodule Html5ever.Mixfile do
 
   defp package do
     [
-      files: ["lib", "native", "mix.exs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"],
+      files: [
+        "lib",
+        "native",
+        "mix.exs",
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE-APACHE",
+        "LICENSE-MIT"
+      ],
       maintainers: ["hansihe", "philip"],
       licenses: ["MIT", "Apache-2.0"],
       links: %{"GitHub" => @repo_url}
