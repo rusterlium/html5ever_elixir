@@ -43,6 +43,14 @@ defmodule Html5ever.PrecompiledTest do
     assert {:ok, "nif-2.16-arm-unknown-linux-gnueabihf"} = Precompiled.target(config)
 
     config = %{
+      system_arch: %{arch: "aarch64", vendor: "buildroot", os: "linux", abi: "gnu"},
+      nif_version: "2.16",
+      os_type: {:unix, :linux}
+    }
+
+    assert {:ok, "nif-2.16-aarch64-unknown-linux-gnu"} = Precompiled.target(config)
+
+    config = %{
       system_arch: %{},
       word_size: 8,
       nif_version: "2.14",
@@ -58,7 +66,7 @@ defmodule Html5ever.PrecompiledTest do
     }
 
     error_message =
-      "precompiled NIF is not available for this target: \"i686-unknown-linux-gnu\".\nThe available targets are:\n - aarch64-apple-darwin\n - x86_64-apple-darwin\n - x86_64-unknown-linux-gnu\n - x86_64-unknown-linux-musl\n - arm-unknown-linux-gnueabihf\n - x86_64-pc-windows-msvc\n - x86_64-pc-windows-gnu"
+      "precompiled NIF is not available for this target: \"i686-unknown-linux-gnu\".\nThe available targets are:\n - aarch64-apple-darwin\n - x86_64-apple-darwin\n - x86_64-unknown-linux-gnu\n - x86_64-unknown-linux-musl\n - arm-unknown-linux-gnueabihf\n - aarch64-unknown-linux-gnu\n - x86_64-pc-windows-msvc\n - x86_64-pc-windows-gnu"
 
     assert {:error, ^error_message} = Precompiled.target(config)
   end

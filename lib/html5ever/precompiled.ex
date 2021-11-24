@@ -9,6 +9,7 @@ defmodule Html5ever.Precompiled do
     x86_64-unknown-linux-gnu
     x86_64-unknown-linux-musl
     arm-unknown-linux-gnueabihf
+    aarch64-unknown-linux-gnu
     x86_64-pc-windows-msvc
     x86_64-pc-windows-gnu
   )
@@ -171,7 +172,7 @@ defmodule Html5ever.Precompiled do
 
     # Fix vendor for Nerves
     vendor =
-      if arch == "arm" and vendor == "buildroot" do
+      if arch in ["arm", "aarch64"] and vendor == "buildroot" do
         "unknown"
       else
         vendor
