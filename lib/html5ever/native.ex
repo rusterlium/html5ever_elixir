@@ -4,7 +4,7 @@ defmodule Html5ever.Native do
 
   mix_config = Mix.Project.config()
   version = mix_config[:version]
-  # @github_url mix_config[:package][:links]["GitHub"]
+  github_url = mix_config[:package][:links]["GitHub"]
 
   rustler_opts = [otp_app: :html5ever, crate: "html5ever_nif", mode: :release]
   env_config = Application.get_env(rustler_opts[:otp_app], Html5ever, [])
@@ -15,10 +15,7 @@ defmodule Html5ever.Native do
     else
       case Html5ever.Precompiled.download_or_reuse_nif_file(
              rustler_opts,
-             # TODO: change to the following before merging PR
-             # base_url: "#{@github_url}/releases/download/v#{@version}",
-             base_url:
-               "https://github.com/philss/html5ever_elixir/releases/download/testing-release33",
+             base_url: "#{github_url}/releases/download/v#{version}",
              version: version
            ) do
         {:ok, new_opts} ->
