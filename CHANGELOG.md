@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Switch from thread pool to being a dirty NIF. This prevents the 
+resulting term from having to be sent between processes, and therefore 
+prevents an extra copy from having to be performed.
+- In the FlatSink implementation for the NIF, track children in a pool
+instead of allocating new vectors for every node. This significantly
+reduces allocator pressure while parsing, and improves performance.
+- When converting a parsed FlatSink into its term representation,
+use a common child node stack instead of allocating a new one for every
+node. This significantly reduces allocator pressure while creating terms, 
+and improves performance.
+
 ## [0.10.1] - 2021-11-24
 
 ### Fixed
