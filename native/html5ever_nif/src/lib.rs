@@ -1,8 +1,3 @@
-use std::panic;
-
-use lazy_static::lazy_static;
-
-use rustler::env::OwnedEnv;
 use rustler::types::binary::Binary;
 use rustler::{Decoder, Encoder, Env, Error, NifResult, Term};
 
@@ -49,21 +44,23 @@ impl<'a> Decoder<'a> for ErrorLevel {
     }
 }
 
-// Thread pool for `parse_async`.
-// TODO: How do we decide on pool size?
-lazy_static! {
-    static ref POOL: scoped_pool::Pool = scoped_pool::Pool::new(4);
-}
-
 #[rustler::nif]
 fn parse_sync<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
+    parse(env, binary)
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
+fn parse_dirty<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
+    parse(env, binary)
+}
+
+fn parse<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
     let sink = flat_dom::FlatSink::new();
 
-    // TODO: Use Parser.from_bytes instead?
-    let parser = html5ever::parse_document(sink, Default::default());
-    let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
+    let utf = std::str::from_utf8(binary.as_slice()).unwrap();
 
-    // std::thread::sleep(std::time::Duration::from_millis(10));
+    let parser = html5ever::parse_document(sink, Default::default());
+    let result = parser.one(utf);
 
     let result_term = flat_dom::flat_sink_to_rec_term(env, &result);
 
@@ -71,127 +68,31 @@ fn parse_sync<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
 }
 
 #[rustler::nif]
-fn parse_async<'a>(env: Env<'a>, term: Term) -> Term<'a> {
-    let mut owned_env = OwnedEnv::new();
-
-    // Copies the term into the inner env. Since this term is normally a large
-    // binary term, copying it over should be cheap, since the binary will be
-    // refcounted within the BEAM.
-    let input_term = owned_env.save(term);
-
-    let return_pid = env.pid();
-
-    // let config = term_to_configs(args[1]);
-
-    POOL.spawn(move || {
-        owned_env.send_and_clear(&return_pid, |inner_env| {
-            // This should not really be done in user code. We (Rustler project)
-            // need to find a better abstraction that eliminates this.
-            match panic::catch_unwind(|| {
-                let binary: Binary = match input_term.load(inner_env).decode() {
-                    Ok(inner) => inner,
-                    Err(_) => panic!("argument is not a binary"),
-                };
-
-                let sink = flat_dom::FlatSink::new();
-
-                // TODO: Use Parser.from_bytes instead?
-                let parser = html5ever::parse_document(sink, Default::default());
-                let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
-
-                let result_term = flat_dom::flat_sink_to_rec_term(inner_env, &result);
-                (atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(inner_env)
-            }) {
-                Ok(term) => term,
-                Err(err) => {
-                    // Try to extract a panic reason and return that. If this
-                    // fails, fail generically.
-                    let reason = if let Some(s) = err.downcast_ref::<String>() {
-                        s.encode(inner_env)
-                    } else if let Some(&s) = err.downcast_ref::<&'static str>() {
-                        s.encode(inner_env)
-                    } else {
-                        atoms::nif_panic().encode(inner_env)
-                    };
-                    (atoms::html5ever_nif_result(), atoms::error(), reason).encode(inner_env)
-                }
-            }
-        });
-    });
-
-    atoms::ok().encode(env)
+fn flat_parse_sync<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
+    flat_parse(env, binary)
 }
 
-#[rustler::nif]
-fn flat_parse_sync<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
+#[rustler::nif(schedule = "DirtyCpu")]
+fn flat_parse_dirty<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
+    flat_parse(env, binary)
+}
+
+fn flat_parse<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
     let sink = flat_dom::FlatSink::new();
 
-    // TODO: Use Parser.from_bytes instead?
-    let parser = html5ever::parse_document(sink, Default::default());
-    let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
+    let utf = std::str::from_utf8(binary.as_slice()).unwrap();
 
-    // std::thread::sleep(std::time::Duration::from_millis(10));
+    let parser = html5ever::parse_document(sink, Default::default());
+    let result = parser.one(utf);
 
     let result_term = flat_dom::flat_sink_to_flat_term(env, &result);
 
     (atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env)
 }
 
-#[rustler::nif]
-fn flat_parse_async<'a>(env: Env<'a>, term: Term) -> Term<'a> {
-    let mut owned_env = OwnedEnv::new();
-
-    // Copies the term into the inner env. Since this term is normally a large
-    // binary term, copying it over should be cheap, since the binary will be
-    // refcounted within the BEAM.
-    let input_term = owned_env.save(term);
-
-    let return_pid = env.pid();
-
-    // let config = term_to_configs(args[1]);
-
-    POOL.spawn(move || {
-        owned_env.send_and_clear(&return_pid, |inner_env| {
-            // This should not really be done in user code. We (Rustler project)
-            // need to find a better abstraction that eliminates this.
-            match panic::catch_unwind(|| {
-                let binary: Binary = match input_term.load(inner_env).decode() {
-                    Ok(inner) => inner,
-                    Err(_) => panic!("argument is not a binary"),
-                };
-
-                let sink = flat_dom::FlatSink::new();
-
-                // TODO: Use Parser.from_bytes instead?
-                let parser = html5ever::parse_document(sink, Default::default());
-                let result = parser.one(std::str::from_utf8(binary.as_slice()).unwrap());
-
-                let result_term = flat_dom::flat_sink_to_flat_term(inner_env, &result);
-                (atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(inner_env)
-            }) {
-                Ok(term) => term,
-                Err(err) => {
-                    // Try to extract a panic reason and return that. If this
-                    // fails, fail generically.
-                    let reason = if let Some(s) = err.downcast_ref::<String>() {
-                        s.encode(inner_env)
-                    } else if let Some(&s) = err.downcast_ref::<&'static str>() {
-                        s.encode(inner_env)
-                    } else {
-                        atoms::nif_panic().encode(inner_env)
-                    };
-                    (atoms::html5ever_nif_result(), atoms::error(), reason).encode(inner_env)
-                }
-            }
-        });
-    });
-
-    atoms::ok().encode(env)
-}
-
 rustler::init!(
     "Elixir.Html5ever.Native",
-    [parse_sync, parse_async, flat_parse_sync, flat_parse_async],
+    [parse_sync, parse_dirty, flat_parse_sync, flat_parse_dirty],
     load = on_load
 );
 
