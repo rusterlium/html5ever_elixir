@@ -35,30 +35,37 @@ defmodule Html5ever.Precompiled do
 
   """
   def target(config \\ target_config()) do
-    sys_arch = maybe_override_with_env_vars(config.system_arch)
-
     arch_os =
       case config.os_type do
-        {:unix, os} ->
-          os
-          |> normalize_arch_os(sys_arch)
+        {:unix, _} ->
+          config.target_system
+          |> normalize_arch_os()
           |> system_arch_to_string()
 
         {:win32, _} ->
-          # 32 or 64 bits
-          arch =
-            case config.word_size do
-              4 -> "i686"
-              8 -> "x86_64"
-              _ -> "unknown"
-            end
+          existing_target =
+            config.target_system
+            |> system_arch_to_string()
 
-          sys_arch
-          |> Map.put_new(:arch, arch)
-          |> Map.put_new(:vendor, "pc")
-          |> Map.put_new(:os, "windows")
-          |> Map.put_new(:abi, "msvc")
-          |> system_arch_to_string()
+          # For when someone is setting "TARGET_*" vars on Windows
+          if existing_target in @available_targets do
+            existing_target
+          else
+            # 32 or 64 bits
+            arch =
+              case config.word_size do
+                4 -> "i686"
+                8 -> "x86_64"
+                _ -> "unknown"
+              end
+
+            config.target_system
+            |> Map.put_new(:arch, arch)
+            |> Map.put_new(:vendor, "pc")
+            |> Map.put_new(:os, "windows")
+            |> Map.put_new(:abi, "msvc")
+            |> system_arch_to_string()
+          end
       end
 
     cond do
@@ -88,9 +95,11 @@ defmodule Html5ever.Precompiled do
           current_nif_version
       end
 
+    current_system_arch = system_arch()
+
     %{
       os_type: :os.type(),
-      system_arch: system_arch(),
+      target_system: maybe_override_with_env_vars(current_system_arch),
       word_size: :erlang.system_info(:wordsize),
       nif_version: nif_version
     }
@@ -148,40 +157,49 @@ defmodule Html5ever.Precompiled do
 
   # The idea is to support systems like Nerves.
   # See: https://hexdocs.pm/nerves/compiling-non-beam-code.html#target-cpu-arch-os-and-abi
-  defp maybe_override_with_env_vars(system_arch) do
-    envs_with_keys = [arch: "TARGET_ARCH", os: "TARGET_OS", abi: "TARGET_ABI"]
+  def maybe_override_with_env_vars(original_sys_arch, get_env \\ &System.get_env/1) do
+    envs_with_keys = [
+      arch: "TARGET_ARCH",
+      vendor: "TARGET_VENDOR",
+      os: "TARGET_OS",
+      abi: "TARGET_ABI"
+    ]
 
-    Enum.reduce(envs_with_keys, system_arch, fn {key, env_key}, acc ->
-      if env_value = System.get_env(env_key) do
-        Map.put(acc, key, env_value)
-      else
-        acc
-      end
-    end)
+    updated_system_arch =
+      Enum.reduce(envs_with_keys, original_sys_arch, fn {key, env_key}, acc ->
+        if env_value = get_env.(env_key) do
+          Map.put(acc, key, env_value)
+        else
+          acc
+        end
+      end)
+
+    # Only replace vendor if remains the same but some other env changed the config.
+    if original_sys_arch != updated_system_arch and
+         original_sys_arch.vendor == updated_system_arch.vendor do
+      Map.put(updated_system_arch, :vendor, "unknown")
+    else
+      updated_system_arch
+    end
   end
 
-  defp normalize_arch_os(:darwin, sys_arch) do
-    arch = with "arm" <- sys_arch.arch, do: "aarch64"
+  defp normalize_arch_os(target_system) do
+    cond do
+      target_system.os =~ "darwin" ->
+        arch = with "arm" <- target_system.arch, do: "aarch64"
 
-    %{sys_arch | arch: arch, os: "darwin"}
+        %{target_system | arch: arch, os: "darwin"}
+
+      target_system.os =~ "linux" ->
+        arch = with "amd64" <- target_system.arch, do: "x86_64"
+        vendor = with "pc" <- target_system.vendor, do: "unknown"
+
+        %{target_system | arch: arch, vendor: vendor}
+
+      true ->
+        target_system
+    end
   end
-
-  defp normalize_arch_os(:linux, sys_arch) do
-    arch = with "amd64" <- sys_arch.arch, do: "x86_64"
-    vendor = with "pc" <- sys_arch.vendor, do: "unknown"
-
-    # Fix vendor for Nerves
-    vendor =
-      if arch in ["arm", "aarch64"] and vendor == "buildroot" do
-        "unknown"
-      else
-        vendor
-      end
-
-    %{sys_arch | arch: arch, vendor: vendor}
-  end
-
-  defp normalize_arch_os(_other, sys_arch), do: sys_arch
 
   defp system_arch_to_string(system_arch) do
     values =
