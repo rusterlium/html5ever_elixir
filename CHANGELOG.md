@@ -18,6 +18,12 @@ reduces allocator pressure while parsing, and improves performance.
 use a common child node stack instead of allocating a new one for every
 node. This significantly reduces allocator pressure while creating terms, 
 and improves performance.
+- Start using LTO for the NIF compilation. This reduces the build size
+and improves performance.
+
+### Fixed
+
+- Fix the target selection when using `TARGET_*` env vars on macOS.
 
 ## [0.10.1] - 2021-11-24
 
