@@ -222,8 +222,7 @@ defmodule Html5ever.Precompiled do
 
     priv_dir = Application.app_dir(name, "priv")
 
-    cache_opts = if System.get_env("MIX_XDG"), do: %{os: :linux}, else: %{}
-    cache_dir = :filename.basedir(:user_cache, Atom.to_string(name), cache_opts)
+    cache_dir = cache_dir(name)
 
     with {:ok, target} <- target() do
       nif_name = rustler_opts[:crate] || name
@@ -246,6 +245,23 @@ defmodule Html5ever.Precompiled do
         |> Path.join("native")
         |> Path.join(file_name)
 
+      base_url = Keyword.fetch!(opts, :base_url)
+      # TODO: once we move to Rustler, we probably don't need to fetch `:nif_module`
+      nif_module = Keyword.fetch!(opts, :nif_module) |> inspect()
+
+      metadata = %{
+        otp_app: name,
+        crate: rustler_opts[:crate],
+        cached_tar_gz: cached_tar_gz,
+        base_url: base_url,
+        lib_name: lib_name,
+        file_name: file_name,
+        target: target,
+        version: version
+      }
+
+      write_metadata(%{nif_module => metadata})
+
       # Override Rustler opts so we load from the downloaded file.
       # See: https://hexdocs.pm/rustler/Rustler.html#module-configuration-options 
       new_opts =
@@ -265,7 +281,6 @@ defmodule Html5ever.Precompiled do
           end
 
         true ->
-          base_url = Keyword.fetch!(opts, :base_url)
           dirname = Path.dirname(lib_file)
 
           with :ok <- File.mkdir_p(cache_dir),
@@ -278,6 +293,11 @@ defmodule Html5ever.Precompiled do
           end
       end
     end
+  end
+
+  defp cache_dir(app_name) do
+    cache_opts = if System.get_env("MIX_XDG"), do: %{os: :linux}, else: %{}
+    :filename.basedir(:user_cache, Atom.to_string(app_name), cache_opts)
   end
 
   defp lib_prefix(target) do
@@ -354,5 +374,50 @@ defmodule Html5ever.Precompiled do
       other ->
         {:error, "couldn't fetch NIF from #{url}: #{inspect(other)}"}
     end
+  end
+
+  # This works like the mix.lock file, but will read/write
+  # metadata for the given NIF. 
+  def read_metadata do
+    metadata_file = metadata_file()
+    opts = [file: metadata_file, warn_on_unnecessary_quotes: false]
+
+    with {:ok, contents} <- File.read(metadata_file),
+         {:ok, quoted} <- Code.string_to_quoted(contents, opts),
+         {%{} = lock, _binding} <- Code.eval_quoted(quoted, [], opts) do
+      lock
+    else
+      _ -> %{}
+    end
+  end
+
+  defp write_metadata(metadata) do
+    existing = read_metadata()
+
+    unless Map.equal?(metadata, existing) do
+      map = Map.merge(existing, metadata)
+
+      lines =
+        for {nif_module, details} <- Enum.sort(map), details != nil do
+          ~s(  "#{nif_module}" => #{inspect(details, limit: :infinity)},\n)
+        end
+
+      file = metadata_file()
+      dir = Path.dirname(file)
+      :ok = File.mkdir_p(dir)
+
+      File.write!(file, ["%{\n", lines, "}\n"])
+    end
+
+    :ok
+  end
+
+  # TODO: consider nesting the cache dir with "this" project name. 
+  # This is because other projects in the same machine can conflict
+  # with the metadata file. Another option is to have metadata files
+  # for each project.
+  defp metadata_file do
+    rustler_cache = cache_dir(:rustler)
+    Path.join(rustler_cache, "nifs_metadata.exs")
   end
 end
