@@ -15,6 +15,12 @@ defmodule Html5ever.Precompiled do
   )
   @available_nif_versions ~w(2.14 2.15 2.16)
 
+  def available_targets do
+    for target_triple <- @available_targets, nif_version <- @available_nif_versions do
+      "nif-#{nif_version}-#{target_triple}"
+    end
+  end
+
   @doc """
   Returns the target triple for download or compile and load.
 
@@ -222,6 +228,15 @@ defmodule Html5ever.Precompiled do
     with {:ok, target} <- target() do
       nif_name = rustler_opts[:crate] || name
       lib_name = "#{lib_prefix(target)}#{nif_name}-v#{version}-#{target}"
+
+      # We need to save some metadata for downloading.
+      # TODO: consider adding this to the module defining the NIF
+      # Application.put_env(name, __MODULE__,
+      #   nif_name: nif_name,
+      #   lib_name: lib_name,
+      #   version: version,
+      #   target: target
+      # )
 
       file_name = lib_name_with_ext(target, lib_name)
       cached_tar_gz = Path.join(cache_dir, "#{file_name}.tar.gz")
