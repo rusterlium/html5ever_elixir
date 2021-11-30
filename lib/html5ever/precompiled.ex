@@ -14,10 +14,32 @@ defmodule Html5ever.Precompiled do
     x86_64-pc-windows-gnu
   )
   @available_nif_versions ~w(2.14 2.15 2.16)
+  @checksum_algo :sha256
 
   def available_targets do
     for target_triple <- @available_targets, nif_version <- @available_nif_versions do
       "nif-#{nif_version}-#{target_triple}"
+    end
+  end
+
+  def available_nif_urls(module_name) do
+    metadata = read_metadata()
+
+    case metadata[module_name] do
+      %{base_url: _, basename: _, version: _} = details ->
+        base_url = details[:base_url]
+        basename = details[:basename]
+        version = details[:version]
+
+        for target <- available_targets() do
+          lib_name = "#{lib_prefix(target)}#{basename}-v#{version}-#{target}"
+
+          tar_gz_file_url(base_url, lib_name_with_ext(target, lib_name))
+        end
+
+      nil ->
+        # TODO: maybe warn about the metadata
+        []
     end
   end
 
@@ -222,20 +244,11 @@ defmodule Html5ever.Precompiled do
 
     priv_dir = Application.app_dir(name, "priv")
 
-    cache_dir = cache_dir(name)
+    cache_dir = cache_dir("precompiled_nifs")
 
     with {:ok, target} <- target() do
-      nif_name = rustler_opts[:crate] || name
-      lib_name = "#{lib_prefix(target)}#{nif_name}-v#{version}-#{target}"
-
-      # We need to save some metadata for downloading.
-      # TODO: consider adding this to the module defining the NIF
-      # Application.put_env(name, __MODULE__,
-      #   nif_name: nif_name,
-      #   lib_name: lib_name,
-      #   version: version,
-      #   target: target
-      # )
+      basename = rustler_opts[:crate] || name
+      lib_name = "#{lib_prefix(target)}#{basename}-v#{version}-#{target}"
 
       file_name = lib_name_with_ext(target, lib_name)
       cached_tar_gz = Path.join(cache_dir, "#{file_name}.tar.gz")
@@ -254,6 +267,7 @@ defmodule Html5ever.Precompiled do
         crate: rustler_opts[:crate],
         cached_tar_gz: cached_tar_gz,
         base_url: base_url,
+        basename: basename,
         lib_name: lib_name,
         file_name: file_name,
         target: target,
@@ -269,6 +283,7 @@ defmodule Html5ever.Precompiled do
         |> Keyword.put(:skip_compilation?, true)
         |> Keyword.put(:load_from, {name, "priv/native/#{lib_name}"})
 
+      # TODO: add option to only write metadata
       cond do
         File.exists?(lib_file) ->
           Logger.debug("Using NIF from #{lib_file}")
@@ -286,6 +301,7 @@ defmodule Html5ever.Precompiled do
           with :ok <- File.mkdir_p(cache_dir),
                :ok <- File.mkdir_p(dirname),
                {:ok, tar_gz} <- download_tar_gz(base_url, lib_name, cached_tar_gz),
+               :ok <- File.write(cached_tar_gz, tar_gz),
                :ok <-
                  :erl_tar.extract({:binary, tar_gz}, [:compressed, cwd: Path.dirname(lib_file)]) do
             Logger.debug("NIF cached at #{cached_tar_gz} and extracted to #{lib_file}")
@@ -295,9 +311,9 @@ defmodule Html5ever.Precompiled do
     end
   end
 
-  defp cache_dir(app_name) do
+  defp cache_dir(sub_dir) do
     cache_opts = if System.get_env("MIX_XDG"), do: %{os: :linux}, else: %{}
-    :filename.basedir(:user_cache, Atom.to_string(app_name), cache_opts)
+    :filename.basedir(:user_cache, "rustler/" <> sub_dir, cache_opts)
   end
 
   defp lib_prefix(target) do
@@ -319,15 +335,21 @@ defmodule Html5ever.Precompiled do
     "#{lib_name}.#{ext}"
   end
 
-  defp download_tar_gz(base_url, lib_name, target_name) do
+  defp tar_gz_file_url(base_url, file_name) do
     uri = URI.parse(base_url)
 
     uri =
       Map.update!(uri, :path, fn path ->
-        "#{path}/#{lib_name_with_ext(target_name, lib_name)}.tar.gz"
+        "#{path}/#{file_name}.tar.gz"
       end)
 
-    download_nif_artifact(to_string(uri))
+    to_string(uri)
+  end
+
+  defp download_tar_gz(base_url, lib_name, target_name) do
+    base_url
+    |> tar_gz_file_url(lib_name_with_ext(target_name, lib_name))
+    |> download_nif_artifact()
   end
 
   # Gets the NIF file from a given URL.
@@ -376,6 +398,42 @@ defmodule Html5ever.Precompiled do
     end
   end
 
+  # It receives the URLs and returns a list of maps with the file details
+  def download_nif_artifacts_with_checksums(urls) do
+    tasks =
+      for url <- urls do
+        Task.async(fn ->
+          {:download, {url, download_nif_artifact(url)}}
+        end)
+      end
+
+    cache_dir = cache_dir("precompiled_nifs")
+    :ok = File.mkdir_p(cache_dir)
+
+    Enum.map(tasks, fn task ->
+      with {:download, {url, download_result}} <- Task.await(task),
+           {:download_result, {:ok, body}} <- {:download_result, download_result},
+           {:hash, hash} <- {:hash, :crypto.hash(@checksum_algo, body)},
+           path <- Path.join(cache_dir, basename_from_url(url)),
+           {:file, :ok} <- {:file, File.write(path, body)} do
+        %{
+          url: url,
+          path: path,
+          checksum: Base.encode16(hash, case: :lower),
+          checksum_algo: @checksum_algo
+        }
+      end
+    end)
+  end
+
+  defp basename_from_url(url) do
+    uri = URI.parse(url)
+
+    uri.path
+    |> String.split("/")
+    |> List.last()
+  end
+
   # This works like the mix.lock file, but will read/write
   # metadata for the given NIF. 
   def read_metadata do
@@ -391,6 +449,7 @@ defmodule Html5ever.Precompiled do
     end
   end
 
+  # TODO: consider acquiring a lock for that file maybe with another tmp file.
   defp write_metadata(metadata) do
     existing = read_metadata()
 
@@ -412,12 +471,8 @@ defmodule Html5ever.Precompiled do
     :ok
   end
 
-  # TODO: consider nesting the cache dir with "this" project name. 
-  # This is because other projects in the same machine can conflict
-  # with the metadata file. Another option is to have metadata files
-  # for each project.
   defp metadata_file do
-    rustler_cache = cache_dir(:rustler)
-    Path.join(rustler_cache, "nifs_metadata.exs")
+    rustler_cache = cache_dir("metadata")
+    Path.join(rustler_cache, "nif_modules.exs")
   end
 end
