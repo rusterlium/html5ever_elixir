@@ -1,20 +1,38 @@
 defmodule Mix.Tasks.Rustler.Download do
   @shortdoc "Download precompiled NIFs and build checksums"
 
+  @moduledoc """
+  This is responsible for downloading the precompiled NIFs for a given module.
+
+  It will also save the checksum file in the proper location in case it is not
+  present. This is important because we need to calculate the checksum before
+  extracting the NIF to the proper location.
+  """
+
   use Mix.Task
 
-  # mix rustler.download Html5Ever --all 
-  # or
-  # mix rustler.download Html5Ever
+  alias Html5ever.Precompiled
 
   @impl true
-  def run(_) do
-    urls = Html5ever.Precompiled.available_nif_urls("Html5ever.Native")
-    IO.puts(inspect(urls))
+  def run([module_name | maybe_flags]) do
+    urls =
+      case maybe_flags do
+        ["--all"] ->
+          Precompiled.available_nif_urls(module_name)
 
-    result = Html5ever.Precompiled.download_nif_artifacts_with_checksums(urls)
+        ["--only-target"] ->
+          [Precompiled.current_target_nif_url(module_name)]
 
-    IO.inspect(result, label: "checksums")
-    # TODO: save result in "priv/native" of the otp app (get from metadata)
+        [] ->
+          raise "you need to specify either \"--all\" or \"--only-target\" flags"
+      end
+
+    result = Precompiled.download_nif_artifacts_with_checksums!(urls)
+    Precompiled.write_checksum!(module_name, result)
+  end
+
+  @impl true
+  def run([]) do
+    raise "the module name and a flag is expected. Use \"--all\" or \"--only-target\" flags"
   end
 end
