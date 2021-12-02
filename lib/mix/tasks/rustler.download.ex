@@ -11,6 +11,8 @@ defmodule Mix.Tasks.Rustler.Download do
 
   You can also use the `--only-local` flag to download only the precompiled
   package for use during development.
+
+  This task also accept the `--print` flag to print the checksums.
   """
 
   use Mix.Task
@@ -20,18 +22,29 @@ defmodule Mix.Tasks.Rustler.Download do
   @impl true
   def run([module_name | maybe_flags]) do
     urls =
-      case maybe_flags do
-        ["--all"] ->
+      cond do
+        "--all" in maybe_flags ->
           Precompiled.available_nif_urls(module_name)
 
-        ["--only-local"] ->
+        "--only-local" in maybe_flags ->
           [Precompiled.current_target_nif_url(module_name)]
 
-        [] ->
+        true ->
           raise "you need to specify either \"--all\" or \"--only-local\" flags"
       end
 
     result = Precompiled.download_nif_artifacts_with_checksums!(urls)
+
+    if "--print" in maybe_flags do
+      result
+      |> Enum.map(fn map ->
+        {Path.basename(Map.fetch!(map, :path)), Map.fetch!(map, :checksum)}
+      end)
+      |> Enum.sort()
+      |> Enum.map_join("\n", fn {file, checksum} -> "#{checksum}  #{file}" end)
+      |> IO.puts()
+    end
+
     Precompiled.write_checksum!(module_name, result)
   end
 
