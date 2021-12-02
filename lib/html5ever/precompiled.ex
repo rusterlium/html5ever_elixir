@@ -335,12 +335,23 @@ defmodule Html5ever.Precompiled do
     end
   end
 
-  # TODO: consider testing this function
+  defp checksum_map(module_name, otp_app) do
+    module_name
+    |> checksum_file(otp_app)
+    |> read_map_from_file_safely()
+  end
+
   defp check_file_integrity(file_path, module_name, otp_app) do
-    checksum = read_map_from_file_safely(checksum_file(module_name, otp_app))
+    module_name
+    |> checksum_map(otp_app)
+    |> check_integrity_from_map(file_path, module_name)
+  end
+
+  # It receives the map of %{ "filename" => "algo:checksum" } with the file path
+  def check_integrity_from_map(checksum_map, file_path, module_name) do
     basename = Path.basename(file_path)
 
-    case Map.fetch(checksum, basename) do
+    case Map.fetch(checksum_map, basename) do
       {:ok, algo_with_hash} ->
         [algo, hash] = String.split(algo_with_hash, ":")
         algo = String.to_existing_atom(algo)
@@ -348,7 +359,8 @@ defmodule Html5ever.Precompiled do
         if algo in @checksum_algorithms do
           with {:ok, content} <- File.read(file_path) do
             tar_gz_hash =
-              :crypto.hash(algo, content)
+              algo
+              |> :crypto.hash(content)
               |> Base.encode16(case: :lower)
 
             if hash == tar_gz_hash do
@@ -364,7 +376,7 @@ defmodule Html5ever.Precompiled do
 
       :error ->
         {:error,
-         "the precompiled NIF file does not exist in the checksum file. Please consider run: `mix rustler.download #{module_name} --only-target` to generate the checksum file."}
+         "the precompiled NIF file does not exist in the checksum file. Please consider run: `mix rustler.download #{module_name} --only-local` to generate the checksum file."}
     end
   end
 

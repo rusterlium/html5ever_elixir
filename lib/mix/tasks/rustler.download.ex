@@ -24,11 +24,11 @@ defmodule Mix.Tasks.Rustler.Download do
         ["--all"] ->
           Precompiled.available_nif_urls(module_name)
 
-        ["--only-target"] ->
+        ["--only-local"] ->
           [Precompiled.current_target_nif_url(module_name)]
 
         [] ->
-          raise "you need to specify either \"--all\" or \"--only-target\" flags"
+          raise "you need to specify either \"--all\" or \"--only-local\" flags"
       end
 
     result = Precompiled.download_nif_artifacts_with_checksums!(urls)
@@ -37,6 +37,6 @@ defmodule Mix.Tasks.Rustler.Download do
 
   @impl true
   def run([]) do
-    raise "the module name and a flag is expected. Use \"--all\" or \"--only-target\" flags"
+    raise "the module name and a flag is expected. Use \"--all\" or \"--only-local\" flags"
   end
 end
