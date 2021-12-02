@@ -310,9 +310,7 @@ defmodule Html5ever.Precompiled do
         File.exists?(cached_tar_gz) ->
           # Remove existing NIF file so we don't have processes using it.
           # See: https://github.com/rusterlium/rustler/blob/46494d261cbedd3c798f584459e42ab7ee6ea1f4/rustler_mix/lib/rustler/compiler.ex#L134
-          if File.exists?(lib_file) do
-            File.rm!(lib_file)
-          end
+          File.rm(lib_file)
 
           with :ok <- check_file_integrity(cached_tar_gz, nif_module, name),
                :ok <- :erl_tar.extract(cached_tar_gz, [:compressed, cwd: Path.dirname(lib_file)]) do

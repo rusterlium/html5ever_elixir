@@ -4,9 +4,13 @@ defmodule Mix.Tasks.Rustler.Download do
   @moduledoc """
   This is responsible for downloading the precompiled NIFs for a given module.
 
-  It will also save the checksum file in the proper location in case it is not
-  present. This is important because we need to calculate the checksum before
-  extracting the NIF to the proper location.
+  This task must only be used by Rustler's package creators who want to ship
+  precompiled NIFs. The goal is to download precompiled packages and
+  generate a checksum to check-in alongside the Hex repository. This is done
+  by passing the `--all` flag.
+
+  You can also use the `--only-local` flag to download only the precompiled
+  package for use during development.
   """
 
   use Mix.Task
