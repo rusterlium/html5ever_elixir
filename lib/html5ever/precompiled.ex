@@ -473,18 +473,13 @@ defmodule Html5ever.Precompiled do
   """
   def download_nif_artifacts_with_checksums!(urls) do
     tasks =
-      for url <- urls do
-        Task.async(fn ->
-          {:download, {url, download_nif_artifact(url)}}
-        end)
-      end
+      Task.async_stream(urls, fn url -> {url, download_nif_artifact(url)} end, timeout: :infinity)
 
     cache_dir = cache_dir("precompiled_nifs")
     :ok = File.mkdir_p(cache_dir)
 
-    # TODO: consider using `Task.yield_many` with a custom timeout
-    Enum.map(tasks, fn task ->
-      with {:download, {url, download_result}} <- Task.await(task),
+    Enum.map(tasks, fn {:ok, result} ->
+      with {:download, {url, download_result}} <- {:download, result},
            {:download_result, {:ok, body}} <- {:download_result, download_result},
            hash <- :crypto.hash(@checksum_algo, body),
            path <- Path.join(cache_dir, basename_from_url(url)),
