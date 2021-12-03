@@ -32,7 +32,7 @@ defmodule Html5ever.Precompiled do
   is stored in a metadata file.
   """
   def available_nif_urls(module_name) when is_atom(module_name) do
-    metadata = read_map_from_file_safely(metadata_file())
+    metadata = read_map_from_file(metadata_file())
 
     case metadata[module_name] do
       %{base_url: base_url, basename: basename, version: version} ->
@@ -49,7 +49,7 @@ defmodule Html5ever.Precompiled do
   end
 
   def current_target_nif_url(module_name) when is_atom(module_name) do
-    metadata = read_map_from_file_safely(metadata_file())
+    metadata = read_map_from_file(metadata_file())
 
     case metadata[module_name] do
       %{base_url: base_url, file_name: file_name} ->
@@ -338,7 +338,7 @@ defmodule Html5ever.Precompiled do
   defp checksum_map(module_name) when is_atom(module_name) do
     module_name
     |> checksum_file()
-    |> read_map_from_file_safely()
+    |> read_map_from_file()
   end
 
   defp check_file_integrity(file_path, module_name) when is_atom(module_name) do
@@ -511,12 +511,9 @@ defmodule Html5ever.Precompiled do
     |> List.last()
   end
 
-  defp read_map_from_file_safely(file) do
-    opts = [file: file, warn_on_unnecessary_quotes: false]
-
+  def read_map_from_file(file) do
     with {:ok, contents} <- File.read(file),
-         {:ok, quoted} <- Code.string_to_quoted(contents, opts),
-         {%{} = contents, _binding} <- Code.eval_quoted(quoted, [], opts) do
+         {%{} = contents, _} <- Code.eval_string(contents) do
       contents
     else
       _ -> %{}
@@ -525,7 +522,7 @@ defmodule Html5ever.Precompiled do
 
   # TODO: consider acquiring a lock for that file maybe with another tmp file.
   defp write_metadata(metadata) do
-    existing = read_map_from_file_safely(metadata_file())
+    existing = read_map_from_file(metadata_file())
 
     unless Map.equal?(metadata, existing) do
       file = metadata_file()
@@ -556,7 +553,7 @@ defmodule Html5ever.Precompiled do
   It receives the module name and checksums.
   """
   def write_checksum!(module_name, checksums) when is_atom(module_name) do
-    metadata = read_map_from_file_safely(metadata_file())
+    metadata = read_map_from_file(metadata_file())
 
     case metadata[module_name] do
       %{otp_app: _name} ->
