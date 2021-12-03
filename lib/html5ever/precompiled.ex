@@ -31,10 +31,13 @@ defmodule Html5ever.Precompiled do
   The module name is the one that defined the NIF and this information
   is stored in a metadata file.
   """
-  def available_nif_urls(module_name) when is_atom(module_name) do
-    metadata = read_map_from_file(metadata_file())
+  def available_nif_urls(nif_module) when is_atom(nif_module) do
+    metadata =
+      nif_module
+      |> metadata_file()
+      |> read_map_from_file()
 
-    case metadata[module_name] do
+    case metadata do
       %{base_url: base_url, basename: basename, version: version} ->
         for target <- available_targets() do
           # We need to build again the name because each arch is different.
@@ -44,19 +47,22 @@ defmodule Html5ever.Precompiled do
         end
 
       _ ->
-        raise "metadata about current target for the module #{inspect(module_name)} is not available. Please compile the project again with: `mix compile --force`"
+        raise "metadata about current target for the module #{inspect(nif_module)} is not available. Please compile the project again with: `mix compile --force`"
     end
   end
 
-  def current_target_nif_url(module_name) when is_atom(module_name) do
-    metadata = read_map_from_file(metadata_file())
+  def current_target_nif_url(nif_module) when is_atom(nif_module) do
+    metadata =
+      nif_module
+      |> metadata_file()
+      |> read_map_from_file()
 
-    case metadata[module_name] do
+    case metadata do
       %{base_url: base_url, file_name: file_name} ->
         tar_gz_file_url(base_url, file_name)
 
       _ ->
-        raise "metadata about current target for the module #{inspect(module_name)} is not available. Please compile the project again with: `mix compile --force`"
+        raise "metadata about current target for the module #{inspect(nif_module)} is not available. Please compile the project again with: `mix compile --force`"
     end
   end
 
@@ -296,7 +302,7 @@ defmodule Html5ever.Precompiled do
         version: version
       }
 
-      write_metadata(%{nif_module => metadata})
+      write_metadata(nif_module, metadata)
 
       # Override Rustler opts so we load from the downloaded file.
       # See: https://hexdocs.pm/rustler/Rustler.html#module-configuration-options 
@@ -335,20 +341,20 @@ defmodule Html5ever.Precompiled do
     end
   end
 
-  defp checksum_map(module_name) when is_atom(module_name) do
-    module_name
+  defp checksum_map(nif_module) when is_atom(nif_module) do
+    nif_module
     |> checksum_file()
     |> read_map_from_file()
   end
 
-  defp check_file_integrity(file_path, module_name) when is_atom(module_name) do
-    module_name
+  defp check_file_integrity(file_path, nif_module) when is_atom(nif_module) do
+    nif_module
     |> checksum_map()
-    |> check_integrity_from_map(file_path, module_name)
+    |> check_integrity_from_map(file_path, nif_module)
   end
 
   # It receives the map of %{ "filename" => "algo:checksum" } with the file path
-  def check_integrity_from_map(checksum_map, file_path, module_name) do
+  def check_integrity_from_map(checksum_map, file_path, nif_module) do
     basename = Path.basename(file_path)
 
     case Map.fetch(checksum_map, basename) do
@@ -376,7 +382,7 @@ defmodule Html5ever.Precompiled do
 
       :error ->
         {:error,
-         "the precompiled NIF file does not exist in the checksum file. Please consider run: `mix rustler.download #{inspect(module_name)} --only-local` to generate the checksum file."}
+         "the precompiled NIF file does not exist in the checksum file. Please consider run: `mix rustler.download #{inspect(nif_module)} --only-local` to generate the checksum file."}
     end
   end
 
@@ -520,31 +526,23 @@ defmodule Html5ever.Precompiled do
     end
   end
 
-  # TODO: consider acquiring a lock for that file maybe with another tmp file.
-  defp write_metadata(metadata) do
-    existing = read_map_from_file(metadata_file())
+  defp write_metadata(nif_module, metadata) do
+    metadata_file = metadata_file(nif_module)
+    existing = read_map_from_file(metadata_file)
 
     unless Map.equal?(metadata, existing) do
-      file = metadata_file()
-      dir = Path.dirname(file)
+      dir = Path.dirname(metadata_file)
       :ok = File.mkdir_p(dir)
 
-      map = Map.merge(existing, metadata)
-
-      lines =
-        for {nif_module, details} <- Enum.sort(map), details != nil do
-          ~s(  #{nif_module} => #{inspect(details, limit: :infinity)},\n)
-        end
-
-      File.write!(file, ["%{\n", lines, "}\n"])
+      File.write!(metadata_file, inspect(metadata, limit: :infinity, pretty: true))
     end
 
     :ok
   end
 
-  defp metadata_file do
+  defp metadata_file(nif_module) when is_atom(nif_module) do
     rustler_cache = cache_dir("metadata")
-    Path.join(rustler_cache, "nif_modules.exs")
+    Path.join(rustler_cache, "metadata-#{nif_module}.exs")
   end
 
   @doc """
@@ -552,12 +550,15 @@ defmodule Html5ever.Precompiled do
 
   It receives the module name and checksums.
   """
-  def write_checksum!(module_name, checksums) when is_atom(module_name) do
-    metadata = read_map_from_file(metadata_file())
+  def write_checksum!(nif_module, checksums) when is_atom(nif_module) do
+    metadata =
+      nif_module
+      |> metadata_file()
+      |> read_map_from_file()
 
-    case metadata[module_name] do
+    case metadata do
       %{otp_app: _name} ->
-        file = checksum_file(module_name)
+        file = checksum_file(nif_module)
 
         pairs =
           for %{path: path, checksum: checksum, checksum_algo: algo} <- checksums, into: %{} do
@@ -574,12 +575,12 @@ defmodule Html5ever.Precompiled do
         File.write!(file, ["%{\n", lines, "}\n"])
 
       _ ->
-        raise "could not find the OTP app for #{inspect(module_name)} in the metadata file. Please compile the project again with: `mix compile --force`."
+        raise "could not find the OTP app for #{inspect(nif_module)} in the metadata file. Please compile the project again with: `mix compile --force`."
     end
   end
 
-  defp checksum_file(module_name) do
+  defp checksum_file(nif_module) do
     # Saves the file in the project root.
-    Path.join(File.cwd!(), "checksum-#{module_name}.exs")
+    Path.join(File.cwd!(), "checksum-#{nif_module}.exs")
   end
 end
