@@ -189,8 +189,11 @@ defmodule Html5ever.PrecompiledTest do
 
     wrong_file_path = Path.join(tmp_dir, "i-dont-exist/poem.txt")
 
-    assert {:error,
-            "cannot read the file for checksum comparison: \"/home/philip/sandbox/html5ever_elixir/tmp/Html5ever.PrecompiledTest/test-check_integrity_from_map-3/i-dont-exist/poem.txt\". Reason: :enoent"} =
+    assert {:error, message} =
              Precompiled.check_integrity_from_map(checksum_map, wrong_file_path, MyModule)
+
+    assert message =~ "cannot read the file for checksum comparison: "
+    assert message =~ wrong_file_path
+    assert message =~ "Reason: :enoent"
   end
 end
