@@ -355,6 +355,12 @@ defmodule Html5ever.Precompiled do
 
   # It receives the map of %{ "filename" => "algo:checksum" } with the file path
   def check_integrity_from_map(checksum_map, file_path, nif_module) do
+    with {:ok, {algo, hash}} <- find_checksum(checksum_map, file_path, nif_module),
+         :ok <- validate_checksum_algo(algo),
+         do: compare_checksum(file_path, algo, hash)
+  end
+
+  defp find_checksum(checksum_map, file_path, nif_module) do
     basename = Path.basename(file_path)
 
     case Map.fetch(checksum_map, basename) do
@@ -362,27 +368,40 @@ defmodule Html5ever.Precompiled do
         [algo, hash] = String.split(algo_with_hash, ":")
         algo = String.to_existing_atom(algo)
 
-        if algo in @checksum_algorithms do
-          with {:ok, content} <- File.read(file_path) do
-            tar_gz_hash =
-              algo
-              |> :crypto.hash(content)
-              |> Base.encode16(case: :lower)
-
-            if hash == tar_gz_hash do
-              :ok
-            else
-              {:error, "the integrity check failed because the checksum of files does not match"}
-            end
-          end
-        else
-          {:error,
-           "checksum algorithm is not supported: #{inspect(algo)}. The supported ones are:\n - #{Enum.join(@checksum_algorithms, "\n - ")}"}
-        end
+        {:ok, {algo, hash}}
 
       :error ->
         {:error,
          "the precompiled NIF file does not exist in the checksum file. Please consider run: `mix rustler.download #{inspect(nif_module)} --only-local` to generate the checksum file."}
+    end
+  end
+
+  defp validate_checksum_algo(algo) do
+    if algo in @checksum_algorithms do
+      :ok
+    else
+      {:error,
+       "checksum algorithm is not supported: #{inspect(algo)}. The supported ones are:\n - #{Enum.join(@checksum_algorithms, "\n - ")}"}
+    end
+  end
+
+  defp compare_checksum(file_path, algo, expected_checksum) do
+    case File.read(file_path) do
+      {:ok, content} ->
+        file_hash =
+          algo
+          |> :crypto.hash(content)
+          |> Base.encode16(case: :lower)
+
+        if file_hash == expected_checksum do
+          :ok
+        else
+          {:error, "the integrity check failed because the checksum of files does not match"}
+        end
+
+      {:error, reason} ->
+        {:error,
+         "cannot read the file for checksum comparison: #{inspect(file_path)}. Reason: #{inspect(reason)}"}
     end
   end
 
