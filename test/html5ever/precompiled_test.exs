@@ -164,11 +164,11 @@ defmodule Html5ever.PrecompiledTest do
       "poem.txt" => "sha256:fe16da553f29a704ad4c78624bc9354b8e4df6e4de8edb5b0f8d9f9090501911"
     }
 
-    assert :ok = Precompiled.check_integrity_from_map(checksum_map, file_path, "MyModule")
+    assert :ok = Precompiled.check_integrity_from_map(checksum_map, file_path, MyModule)
 
     assert {:error,
             "the precompiled NIF file does not exist in the checksum file. Please consider run: `mix rustler.download MyModule --only-local` to generate the checksum file."} =
-             Precompiled.check_integrity_from_map(checksum_map, "idontexist", "MyModule")
+             Precompiled.check_integrity_from_map(checksum_map, "idontexist", MyModule)
 
     not_supported_checksum_map = %{
       "poem.txt" => "md5:fe16da553f29a704ad4c78624bc9354b8e4df6e4de8edb5b0f8d9f9090501911"
@@ -179,12 +179,12 @@ defmodule Html5ever.PrecompiledTest do
              Precompiled.check_integrity_from_map(
                not_supported_checksum_map,
                file_path,
-               "MyModule"
+               MyModule
              )
 
     :ok = File.write(file_path, "let's change the content of the file")
 
     assert {:error, "the integrity check failed because the checksum of files does not match"} =
-             Precompiled.check_integrity_from_map(checksum_map, file_path, "MyModule")
+             Precompiled.check_integrity_from_map(checksum_map, file_path, MyModule)
   end
 end

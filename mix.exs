@@ -46,7 +46,7 @@ defmodule Html5ever.Mixfile do
       files: [
         "lib",
         "native",
-        "priv/native/checksum-*.exs",
+        "checksum-*.exs",
         "mix.exs",
         "README.md",
         "CHANGELOG.md",

@@ -21,13 +21,15 @@ defmodule Mix.Tasks.Rustler.Download do
 
   @impl true
   def run([module_name | maybe_flags]) do
+    module = String.to_atom("Elixir.#{module_name}")
+
     urls =
       cond do
         "--all" in maybe_flags ->
-          Precompiled.available_nif_urls(module_name)
+          Precompiled.available_nif_urls(module)
 
         "--only-local" in maybe_flags ->
-          [Precompiled.current_target_nif_url(module_name)]
+          [Precompiled.current_target_nif_url(module)]
 
         true ->
           raise "you need to specify either \"--all\" or \"--only-local\" flags"
@@ -45,7 +47,7 @@ defmodule Mix.Tasks.Rustler.Download do
       |> IO.puts()
     end
 
-    Precompiled.write_checksum!(module_name, result)
+    Precompiled.write_checksum!(module, result)
   end
 
   @impl true

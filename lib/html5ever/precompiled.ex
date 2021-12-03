@@ -31,7 +31,7 @@ defmodule Html5ever.Precompiled do
   The module name is the one that defined the NIF and this information
   is stored in a metadata file.
   """
-  def available_nif_urls(module_name) do
+  def available_nif_urls(module_name) when is_atom(module_name) do
     metadata = read_map_from_file_safely(metadata_file())
 
     case metadata[module_name] do
@@ -48,7 +48,7 @@ defmodule Html5ever.Precompiled do
     end
   end
 
-  def current_target_nif_url(module_name) do
+  def current_target_nif_url(module_name) when is_atom(module_name) do
     metadata = read_map_from_file_safely(metadata_file())
 
     case metadata[module_name] do
@@ -282,7 +282,7 @@ defmodule Html5ever.Precompiled do
 
       base_url = Keyword.fetch!(opts, :base_url)
       # TODO: once we move to Rustler, we probably don't need to fetch `:nif_module`
-      nif_module = Keyword.fetch!(opts, :nif_module) |> inspect()
+      nif_module = Keyword.fetch!(opts, :nif_module)
 
       metadata = %{
         otp_app: name,
@@ -312,7 +312,7 @@ defmodule Html5ever.Precompiled do
           # See: https://github.com/rusterlium/rustler/blob/46494d261cbedd3c798f584459e42ab7ee6ea1f4/rustler_mix/lib/rustler/compiler.ex#L134
           File.rm(lib_file)
 
-          with :ok <- check_file_integrity(cached_tar_gz, nif_module, name),
+          with :ok <- check_file_integrity(cached_tar_gz, nif_module),
                :ok <- :erl_tar.extract(cached_tar_gz, [:compressed, cwd: Path.dirname(lib_file)]) do
             Logger.debug("Copying NIF from cache and extracting to #{lib_file}")
             {:ok, new_opts}
@@ -325,7 +325,7 @@ defmodule Html5ever.Precompiled do
                :ok <- File.mkdir_p(dirname),
                {:ok, tar_gz} <- download_tar_gz(base_url, lib_name, cached_tar_gz),
                :ok <- File.write(cached_tar_gz, tar_gz),
-               :ok <- check_file_integrity(cached_tar_gz, nif_module, name),
+               :ok <- check_file_integrity(cached_tar_gz, nif_module),
                :ok <-
                  :erl_tar.extract({:binary, tar_gz}, [:compressed, cwd: Path.dirname(lib_file)]) do
             Logger.debug("NIF cached at #{cached_tar_gz} and extracted to #{lib_file}")
@@ -335,15 +335,15 @@ defmodule Html5ever.Precompiled do
     end
   end
 
-  defp checksum_map(module_name, otp_app) do
+  defp checksum_map(module_name) when is_atom(module_name) do
     module_name
-    |> checksum_file(otp_app)
+    |> checksum_file()
     |> read_map_from_file_safely()
   end
 
-  defp check_file_integrity(file_path, module_name, otp_app) do
+  defp check_file_integrity(file_path, module_name) when is_atom(module_name) do
     module_name
-    |> checksum_map(otp_app)
+    |> checksum_map()
     |> check_integrity_from_map(file_path, module_name)
   end
 
@@ -376,7 +376,7 @@ defmodule Html5ever.Precompiled do
 
       :error ->
         {:error,
-         "the precompiled NIF file does not exist in the checksum file. Please consider run: `mix rustler.download #{module_name} --only-local` to generate the checksum file."}
+         "the precompiled NIF file does not exist in the checksum file. Please consider run: `mix rustler.download #{inspect(module_name)} --only-local` to generate the checksum file."}
     end
   end
 
@@ -536,7 +536,7 @@ defmodule Html5ever.Precompiled do
 
       lines =
         for {nif_module, details} <- Enum.sort(map), details != nil do
-          ~s(  "#{nif_module}" => #{inspect(details, limit: :infinity)},\n)
+          ~s(  #{nif_module} => #{inspect(details, limit: :infinity)},\n)
         end
 
       File.write!(file, ["%{\n", lines, "}\n"])
@@ -555,14 +555,12 @@ defmodule Html5ever.Precompiled do
 
   It receives the module name and checksums.
   """
-  def write_checksum!(module_name, checksums) do
+  def write_checksum!(module_name, checksums) when is_atom(module_name) do
     metadata = read_map_from_file_safely(metadata_file())
 
     case metadata[module_name] do
-      %{otp_app: name} ->
-        file = checksum_file(module_name, name)
-        dir = Path.dirname(file)
-        :ok = File.mkdir_p(dir)
+      %{otp_app: _name} ->
+        file = checksum_file(module_name)
 
         pairs =
           for %{path: path, checksum: checksum, checksum_algo: algo} <- checksums, into: %{} do
@@ -583,17 +581,8 @@ defmodule Html5ever.Precompiled do
     end
   end
 
-  # The checksum file is saved in the "priv/native" of the OTP app.
-  # The "phash2" of the module name is used as sufix for the file name.
-  defp checksum_file(module_name, otp_app) do
-    native_dir = Application.app_dir(otp_app, @native_dir)
-
-    module_id =
-      module_name
-      |> :erlang.phash2()
-      |> Integer.to_string()
-      |> Base.encode16(case: :lower)
-
-    Path.join(native_dir, "checksum-#{module_id}.exs")
+  defp checksum_file(module_name) do
+    # Saves the file in the project root.
+    Path.join(File.cwd!(), "checksum-#{module_name}.exs")
   end
 end
