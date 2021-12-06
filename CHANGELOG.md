@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add checksum verification of precompiled NIF files before extracting
+them to the correct location. This is to avoid supply chain attacks.
+With this change we added a new mix task to download all the files
+and generate the checksum before publishing the package. Additionally
+the user can download only the local NIF file with the checksum.
+See the `RELEASE_CHECKLIST.md` file for details on how we ensure this
+works correctly.
+
 ### Changed
 
 - Switch from thread pool to being a dirty NIF. This prevents the 
