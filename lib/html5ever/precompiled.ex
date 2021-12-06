@@ -14,6 +14,57 @@ defmodule Html5ever.Precompiled do
     x86_64-pc-windows-gnu
   )
   @available_nif_versions ~w(2.14 2.15 2.16)
+  @checksum_algo :sha256
+  @checksum_algorithms [@checksum_algo]
+
+  @native_dir "priv/native"
+
+  def available_targets do
+    for target_triple <- @available_targets, nif_version <- @available_nif_versions do
+      "nif-#{nif_version}-#{target_triple}"
+    end
+  end
+
+  @doc """
+  Returns URLs for NIFs based on its module name
+
+  The module name is the one that defined the NIF and this information
+  is stored in a metadata file.
+  """
+  def available_nif_urls(nif_module) when is_atom(nif_module) do
+    metadata =
+      nif_module
+      |> metadata_file()
+      |> read_map_from_file()
+
+    case metadata do
+      %{base_url: base_url, basename: basename, version: version} ->
+        for target <- available_targets() do
+          # We need to build again the name because each arch is different.
+          lib_name = "#{lib_prefix(target)}#{basename}-v#{version}-#{target}"
+
+          tar_gz_file_url(base_url, lib_name_with_ext(target, lib_name))
+        end
+
+      _ ->
+        raise "metadata about current target for the module #{inspect(nif_module)} is not available. Please compile the project again with: `mix compile --force`"
+    end
+  end
+
+  def current_target_nif_url(nif_module) when is_atom(nif_module) do
+    metadata =
+      nif_module
+      |> metadata_file()
+      |> read_map_from_file()
+
+    case metadata do
+      %{base_url: base_url, file_name: file_name} ->
+        tar_gz_file_url(base_url, file_name)
+
+      _ ->
+        raise "metadata about current target for the module #{inspect(nif_module)} is not available. Please compile the project again with: `mix compile --force`"
+    end
+  end
 
   @doc """
   Returns the target triple for download or compile and load.
@@ -210,26 +261,48 @@ defmodule Html5ever.Precompiled do
     Enum.join(values, "-")
   end
 
+  @doc """
+  Perform the download or load of the precompiled NIF
+
+  It will look in the "priv/native/otp_app" first, and if
+  that file doesn't exist, it will try to fetch from cache.
+  In case there is no valid cached file, then it will try
+  to download the NIF from the provided base URL.
+  """
   def download_or_reuse_nif_file(rustler_opts, opts) do
     name = Keyword.fetch!(rustler_opts, :otp_app)
     version = Keyword.fetch!(opts, :version)
 
-    priv_dir = Application.app_dir(name, "priv")
+    native_dir = Application.app_dir(name, @native_dir)
 
-    cache_opts = if System.get_env("MIX_XDG"), do: %{os: :linux}, else: %{}
-    cache_dir = :filename.basedir(:user_cache, Atom.to_string(name), cache_opts)
+    cache_dir = cache_dir("precompiled_nifs")
 
     with {:ok, target} <- target() do
-      nif_name = rustler_opts[:crate] || name
-      lib_name = "#{lib_prefix(target)}#{nif_name}-v#{version}-#{target}"
+      basename = rustler_opts[:crate] || name
+      lib_name = "#{lib_prefix(target)}#{basename}-v#{version}-#{target}"
 
       file_name = lib_name_with_ext(target, lib_name)
       cached_tar_gz = Path.join(cache_dir, "#{file_name}.tar.gz")
 
-      lib_file =
-        priv_dir
-        |> Path.join("native")
-        |> Path.join(file_name)
+      lib_file = Path.join(native_dir, file_name)
+
+      base_url = Keyword.fetch!(opts, :base_url)
+      # TODO: once we move to Rustler, we probably don't need to fetch `:nif_module`
+      nif_module = Keyword.fetch!(opts, :nif_module)
+
+      metadata = %{
+        otp_app: name,
+        crate: rustler_opts[:crate],
+        cached_tar_gz: cached_tar_gz,
+        base_url: base_url,
+        basename: basename,
+        lib_name: lib_name,
+        file_name: file_name,
+        target: target,
+        version: version
+      }
+
+      write_metadata(nif_module, metadata)
 
       # Override Rustler opts so we load from the downloaded file.
       # See: https://hexdocs.pm/rustler/Rustler.html#module-configuration-options 
@@ -238,24 +311,27 @@ defmodule Html5ever.Precompiled do
         |> Keyword.put(:skip_compilation?, true)
         |> Keyword.put(:load_from, {name, "priv/native/#{lib_name}"})
 
+      # TODO: add option to only write metadata
       cond do
-        File.exists?(lib_file) ->
-          Logger.debug("Using NIF from #{lib_file}")
-          {:ok, new_opts}
-
         File.exists?(cached_tar_gz) ->
-          with :ok <- :erl_tar.extract(cached_tar_gz, [:compressed, cwd: Path.dirname(lib_file)]) do
+          # Remove existing NIF file so we don't have processes using it.
+          # See: https://github.com/rusterlium/rustler/blob/46494d261cbedd3c798f584459e42ab7ee6ea1f4/rustler_mix/lib/rustler/compiler.ex#L134
+          File.rm(lib_file)
+
+          with :ok <- check_file_integrity(cached_tar_gz, nif_module),
+               :ok <- :erl_tar.extract(cached_tar_gz, [:compressed, cwd: Path.dirname(lib_file)]) do
             Logger.debug("Copying NIF from cache and extracting to #{lib_file}")
             {:ok, new_opts}
           end
 
         true ->
-          base_url = Keyword.fetch!(opts, :base_url)
           dirname = Path.dirname(lib_file)
 
           with :ok <- File.mkdir_p(cache_dir),
                :ok <- File.mkdir_p(dirname),
                {:ok, tar_gz} <- download_tar_gz(base_url, lib_name, cached_tar_gz),
+               :ok <- File.write(cached_tar_gz, tar_gz),
+               :ok <- check_file_integrity(cached_tar_gz, nif_module),
                :ok <-
                  :erl_tar.extract({:binary, tar_gz}, [:compressed, cwd: Path.dirname(lib_file)]) do
             Logger.debug("NIF cached at #{cached_tar_gz} and extracted to #{lib_file}")
@@ -263,6 +339,75 @@ defmodule Html5ever.Precompiled do
           end
       end
     end
+  end
+
+  defp checksum_map(nif_module) when is_atom(nif_module) do
+    nif_module
+    |> checksum_file()
+    |> read_map_from_file()
+  end
+
+  defp check_file_integrity(file_path, nif_module) when is_atom(nif_module) do
+    nif_module
+    |> checksum_map()
+    |> check_integrity_from_map(file_path, nif_module)
+  end
+
+  # It receives the map of %{ "filename" => "algo:checksum" } with the file path
+  def check_integrity_from_map(checksum_map, file_path, nif_module) do
+    with {:ok, {algo, hash}} <- find_checksum(checksum_map, file_path, nif_module),
+         :ok <- validate_checksum_algo(algo),
+         do: compare_checksum(file_path, algo, hash)
+  end
+
+  defp find_checksum(checksum_map, file_path, nif_module) do
+    basename = Path.basename(file_path)
+
+    case Map.fetch(checksum_map, basename) do
+      {:ok, algo_with_hash} ->
+        [algo, hash] = String.split(algo_with_hash, ":")
+        algo = String.to_existing_atom(algo)
+
+        {:ok, {algo, hash}}
+
+      :error ->
+        {:error,
+         "the precompiled NIF file does not exist in the checksum file. Please consider run: `mix rustler.download #{inspect(nif_module)} --only-local` to generate the checksum file."}
+    end
+  end
+
+  defp validate_checksum_algo(algo) do
+    if algo in @checksum_algorithms do
+      :ok
+    else
+      {:error,
+       "checksum algorithm is not supported: #{inspect(algo)}. The supported ones are:\n - #{Enum.join(@checksum_algorithms, "\n - ")}"}
+    end
+  end
+
+  defp compare_checksum(file_path, algo, expected_checksum) do
+    case File.read(file_path) do
+      {:ok, content} ->
+        file_hash =
+          algo
+          |> :crypto.hash(content)
+          |> Base.encode16(case: :lower)
+
+        if file_hash == expected_checksum do
+          :ok
+        else
+          {:error, "the integrity check failed because the checksum of files does not match"}
+        end
+
+      {:error, reason} ->
+        {:error,
+         "cannot read the file for checksum comparison: #{inspect(file_path)}. Reason: #{inspect(reason)}"}
+    end
+  end
+
+  defp cache_dir(sub_dir) do
+    cache_opts = if System.get_env("MIX_XDG"), do: %{os: :linux}, else: %{}
+    :filename.basedir(:user_cache, Path.join("rustler", sub_dir), cache_opts)
   end
 
   defp lib_prefix(target) do
@@ -284,18 +429,23 @@ defmodule Html5ever.Precompiled do
     "#{lib_name}.#{ext}"
   end
 
-  defp download_tar_gz(base_url, lib_name, target_name) do
+  defp tar_gz_file_url(base_url, file_name) do
     uri = URI.parse(base_url)
 
     uri =
       Map.update!(uri, :path, fn path ->
-        "#{path}/#{lib_name_with_ext(target_name, lib_name)}.tar.gz"
+        Path.join(path, "#{file_name}.tar.gz")
       end)
 
-    download_nif_artifact(to_string(uri))
+    to_string(uri)
   end
 
-  # Gets the NIF file from a given URL.
+  defp download_tar_gz(base_url, lib_name, target_name) do
+    base_url
+    |> tar_gz_file_url(lib_name_with_ext(target_name, lib_name))
+    |> download_nif_artifact()
+  end
+
   defp download_nif_artifact(url) do
     url = String.to_charlist(url)
     Logger.debug("Downloading NIF from #{url}")
@@ -339,5 +489,117 @@ defmodule Html5ever.Precompiled do
       other ->
         {:error, "couldn't fetch NIF from #{url}: #{inspect(other)}"}
     end
+  end
+
+  @doc """
+  Download a list of files from URLs and calculate its checksum.
+
+  Returns a list with details of the download and the checksum of each file.
+  """
+  def download_nif_artifacts_with_checksums!(urls) do
+    tasks =
+      Task.async_stream(urls, fn url -> {url, download_nif_artifact(url)} end, timeout: :infinity)
+
+    cache_dir = cache_dir("precompiled_nifs")
+    :ok = File.mkdir_p(cache_dir)
+
+    Enum.map(tasks, fn {:ok, result} ->
+      with {:download, {url, download_result}} <- {:download, result},
+           {:download_result, {:ok, body}} <- {:download_result, download_result},
+           hash <- :crypto.hash(@checksum_algo, body),
+           path <- Path.join(cache_dir, basename_from_url(url)),
+           {:file, :ok} <- {:file, File.write(path, body)} do
+        checksum = Base.encode16(hash, case: :lower)
+
+        Logger.debug(
+          "NIF cached at #{path} with checksum #{inspect(checksum)} (#{@checksum_algo})"
+        )
+
+        %{
+          url: url,
+          path: path,
+          checksum: checksum,
+          checksum_algo: @checksum_algo
+        }
+      else
+        {context, result} ->
+          raise "could not finish the download of NIF artifacts. Context: #{inspect(context)}. Reason: #{inspect(result)}"
+      end
+    end)
+  end
+
+  defp basename_from_url(url) do
+    uri = URI.parse(url)
+
+    uri.path
+    |> String.split("/")
+    |> List.last()
+  end
+
+  def read_map_from_file(file) do
+    with {:ok, contents} <- File.read(file),
+         {%{} = contents, _} <- Code.eval_string(contents) do
+      contents
+    else
+      _ -> %{}
+    end
+  end
+
+  defp write_metadata(nif_module, metadata) do
+    metadata_file = metadata_file(nif_module)
+    existing = read_map_from_file(metadata_file)
+
+    unless Map.equal?(metadata, existing) do
+      dir = Path.dirname(metadata_file)
+      :ok = File.mkdir_p(dir)
+
+      File.write!(metadata_file, inspect(metadata, limit: :infinity, pretty: true))
+    end
+
+    :ok
+  end
+
+  defp metadata_file(nif_module) when is_atom(nif_module) do
+    rustler_cache = cache_dir("metadata")
+    Path.join(rustler_cache, "metadata-#{nif_module}.exs")
+  end
+
+  @doc """
+  Write the checksum file with all NIFs available.
+
+  It receives the module name and checksums.
+  """
+  def write_checksum!(nif_module, checksums) when is_atom(nif_module) do
+    metadata =
+      nif_module
+      |> metadata_file()
+      |> read_map_from_file()
+
+    case metadata do
+      %{otp_app: _name} ->
+        file = checksum_file(nif_module)
+
+        pairs =
+          for %{path: path, checksum: checksum, checksum_algo: algo} <- checksums, into: %{} do
+            basename = Path.basename(path)
+            checksum = "#{algo}:#{checksum}"
+            {basename, checksum}
+          end
+
+        lines =
+          for {filename, checksum} <- Enum.sort(pairs) do
+            ~s(  "#{filename}" => #{inspect(checksum, limit: :infinity)},\n)
+          end
+
+        File.write!(file, ["%{\n", lines, "}\n"])
+
+      _ ->
+        raise "could not find the OTP app for #{inspect(nif_module)} in the metadata file. Please compile the project again with: `mix compile --force`."
+    end
+  end
+
+  defp checksum_file(nif_module) do
+    # Saves the file in the project root.
+    Path.join(File.cwd!(), "checksum-#{nif_module}.exs")
   end
 end

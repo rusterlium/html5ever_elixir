@@ -15,6 +15,7 @@ defmodule Html5ever.Native do
     else
       case Html5ever.Precompiled.download_or_reuse_nif_file(
              rustler_opts,
+             nif_module: __MODULE__,
              base_url: "#{github_url}/releases/download/v#{version}",
              version: version
            ) do

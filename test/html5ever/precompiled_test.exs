@@ -148,4 +148,52 @@ defmodule Html5ever.PrecompiledTest do
              abi: "musl"
            }
   end
+
+  @tag :tmp_dir
+  test "check_integrity_from_map/3", %{tmp_dir: tmp_dir} do
+    content = """
+    Roses are red
+    Violets are blue
+    """
+
+    file_path = Path.join(tmp_dir, "poem.txt")
+    :ok = File.write(file_path, content)
+
+    # the checksum is calculated with `:crypto.hash(:sha256, content) |> Base.encode16(case: :lower)`
+    checksum_map = %{
+      "poem.txt" => "sha256:fe16da553f29a704ad4c78624bc9354b8e4df6e4de8edb5b0f8d9f9090501911"
+    }
+
+    assert :ok = Precompiled.check_integrity_from_map(checksum_map, file_path, MyModule)
+
+    assert {:error,
+            "the precompiled NIF file does not exist in the checksum file. Please consider run: `mix rustler.download MyModule --only-local` to generate the checksum file."} =
+             Precompiled.check_integrity_from_map(checksum_map, "idontexist", MyModule)
+
+    not_supported_checksum_map = %{
+      "poem.txt" => "md5:fe16da553f29a704ad4c78624bc9354b8e4df6e4de8edb5b0f8d9f9090501911"
+    }
+
+    assert {:error,
+            "checksum algorithm is not supported: :md5. The supported ones are:\n - sha256"} =
+             Precompiled.check_integrity_from_map(
+               not_supported_checksum_map,
+               file_path,
+               MyModule
+             )
+
+    :ok = File.write(file_path, "let's change the content of the file")
+
+    assert {:error, "the integrity check failed because the checksum of files does not match"} =
+             Precompiled.check_integrity_from_map(checksum_map, file_path, MyModule)
+
+    wrong_file_path = Path.join(tmp_dir, "i-dont-exist/poem.txt")
+
+    assert {:error, message} =
+             Precompiled.check_integrity_from_map(checksum_map, wrong_file_path, MyModule)
+
+    assert message =~ "cannot read the file for checksum comparison: "
+    assert message =~ wrong_file_path
+    assert message =~ "Reason: :enoent"
+  end
 end
