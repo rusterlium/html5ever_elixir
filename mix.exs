@@ -8,10 +8,9 @@ defmodule Html5ever.Mixfile do
     [
       app: :html5ever,
       version: @version,
-      elixir: "~> 1.4",
+      elixir: "~> 1.11",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
-      compilers: Mix.compilers(),
       deps: deps(),
       docs: docs(),
       description: "NIF binding of html5ever using Rustler",
