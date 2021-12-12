@@ -62,9 +62,15 @@ impl<T> PoolOrVec<T> where T: Clone {
                 *len += 1;
             },
             val @ PoolOrVec::Pool { .. } => {
-                *val = PoolOrVec::Vec {
-                    vec: vec![item],
-                };
+                if let PoolOrVec::Pool { head, len } = val {
+                    let mut vec = pool[*head..(*head + *len)].to_owned();
+                    vec.push(item);
+                    *val = PoolOrVec::Vec {
+                        vec: vec,
+                    };
+                } else {
+                    unreachable!()
+                }
             },
             PoolOrVec::Vec { vec } => {
                 vec.push(item);
