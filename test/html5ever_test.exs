@@ -67,4 +67,84 @@ defmodule Html5everTest do
     html = String.duplicate("<div>", 100)
     assert {:ok, _} = Html5ever.flat_parse(html)
   end
+
+  test "reasonably deep html" do
+    html = """
+    <!doctype html>
+    <html>
+      <head>
+        <title>Test</title>
+      </head>
+      <body>
+        <div class="content">
+          <span>
+            <div>
+              <span>
+                <small>
+                very deep content
+                </small>
+              </span>
+            </div>
+            <img src="file.jpg" />
+          </span>
+        </div>
+      </body>
+    </html>
+    """
+
+    parsed = Html5ever.parse(html)
+
+    assert {:ok,
+            [
+              {:doctype, "html", "", ""},
+              {"html", [],
+               [
+                 {"head", [], ["\n", "    ", {"title", [], ["Test"]}, "\n", "  "]},
+                 "\n",
+                 "  ",
+                 {"body", [],
+                  [
+                    "\n",
+                    "    ",
+                    {"div", [{"class", "content"}],
+                     [
+                       "\n",
+                       "      ",
+                       {"span", [],
+                        [
+                          "\n",
+                          "        ",
+                          {"div", [],
+                           [
+                             "\n",
+                             "          ",
+                             {"span", [],
+                              [
+                                "\n",
+                                "            ",
+                                {"small", [],
+                                 ["\n", "            very deep content", "\n", "            "]},
+                                "\n",
+                                "          "
+                              ]},
+                             "\n",
+                             "        "
+                           ]},
+                          "\n",
+                          "        ",
+                          {"img", [{"src", "file.jpg"}], []},
+                          "\n",
+                          "      "
+                        ]},
+                       "\n",
+                       "    "
+                     ]},
+                    "\n",
+                    "  ",
+                    "\n",
+                    "\n"
+                  ]}
+               ]}
+            ]} = parsed
+  end
 end
