@@ -8,5 +8,6 @@
   "makeup_erlang": {:hex, :makeup_erlang, "0.1.1", "3fcb7f09eb9d98dc4d208f49cc955a34218fc41ff6b84df7c75b3e6e533cc65f", [:mix], [{:makeup, "~> 1.0", [hex: :makeup, repo: "hexpm", optional: false]}], "hexpm", "174d0809e98a4ef0b3309256cbf97101c6ec01c4ab0b23e926a9e17df2077cbb"},
   "nimble_parsec": {:hex, :nimble_parsec, "1.2.0", "b44d75e2a6542dcb6acf5d71c32c74ca88960421b6874777f79153bbbbd7dccc", [:mix], [], "hexpm", "52b2871a7515a5ac49b00f214e4165a40724cf99798d8e4a65e4fd64ebd002c1"},
   "rustler": {:hex, :rustler, "0.23.0", "87162ffdf5a46b6aa03d624a77367070ff1263961ae35332c059225e136c4a87", [:mix], [{:jason, "~> 1.2", [hex: :jason, repo: "hexpm", optional: false]}, {:toml, "~> 0.5.2", [hex: :toml, repo: "hexpm", optional: false]}], "hexpm", "f5ab6f0ec564f5569009c0f5685b0e5b379fd72655e82a8dc5a3c24f9fdda36a"},
+  "rustler_precompiled": {:hex, :rustler_precompiled, "0.1.0", "815bff532c9410fd03ae9b54307eec7763d59cda3243529bcd1aa879e54ce450", [:mix], [{:castore, "~> 0.1.14", [hex: :castore, repo: "hexpm", optional: false]}], "hexpm", "86e6c097667f29ee3cdeae7acf3706c439327a4cafb6ea9dded64f7482f63887"},
   "toml": {:hex, :toml, "0.5.2", "e471388a8726d1ce51a6b32f864b8228a1eb8edc907a0edf2bb50eab9321b526", [:mix], [], "hexpm", "f1e3dabef71fb510d015fad18c0e05e7c57281001141504c6b69d94e99750a07"},
 }
