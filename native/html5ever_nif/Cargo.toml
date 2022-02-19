@@ -10,7 +10,7 @@ path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-rustler = "0.23"
+rustler = { git = "https://github.com/rusterlium/rustler" }
 
 html5ever = "0.25"
 markup5ever = "0.10"
