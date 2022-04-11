@@ -13,7 +13,7 @@ crate-type = ["cdylib"]
 rustler = "0.25.0"
 
 html5ever = "0.25"
-markup5ever = "0.10"
+markup5ever = "0.11"
 
 tendril = "0.4"
 lazy_static = "1.4"
