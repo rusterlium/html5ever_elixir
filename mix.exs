@@ -24,7 +24,8 @@ defmodule Html5ever.Mixfile do
 
   defp deps do
     [
-      {:rustler_precompiled, "~> 0.2"},
+      {:rustler_precompiled, "~> 0.4"},
+      {:rustler, ">= 0.0.0", optional: true},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
