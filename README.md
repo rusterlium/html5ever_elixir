@@ -12,9 +12,11 @@ The package can be installed by adding `html5ever` to your list of dependencies 
 
 ```elixir
 def deps do
-  [{:html5ever, "~> 0.12.0"}]
+  [{:html5ever, "~> 0.13.0"}]
 end
 ```
+
+## Forcing compilation
 
 By default **you don't need Rust installed** because the lib will try to download
 a precompiled NIF file. In case you want to force compilation set the
@@ -23,6 +25,18 @@ application env `:build_from_source` to `true` in order to force the build:
 
 ```elixir
 config :html5ever, Html5ever, build_from_source: true
+```
+
+You also need to add Rustler to your dependencies when you want to force
+the compilation:
+
+```elixir
+def deps do
+  [
+    {:html5ever, "~> 0.13.0"},
+    {:rustler, ">= 0.0.0", optional: true}
+  ]
+end
 ```
 
 ## License

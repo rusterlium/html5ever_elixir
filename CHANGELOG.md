@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2022-04-28
+
+### Changed
+
+- Bump requirement for `rustler_precompiled` to `~> v0.4`. This is needed to avoid installing Rustler by default.
+- Bump `html5ever` (Rust crate) to `v0.26.0`.
+
 ## [0.12.0] - 2022-03-14
 
 ### Changed
@@ -77,7 +84,8 @@ is not needed for most of people using this project.
 
 - Add support for OTP 24. This was achieved by updating Rustler to v0.22.
 
-[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.10.0...v0.10.1
