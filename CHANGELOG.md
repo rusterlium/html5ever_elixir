@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2022-06-24
+
+### Fixed
+
+- Fix the precompilation build for targets using `cross` by adding a `Cross.toml`
+file with a setting telling to read the `RUSTLER_NIF_VERSION` env var from the host machine.
+
 ## [0.13.0] - 2022-04-28
 
 ### Changed
@@ -84,7 +91,8 @@ is not needed for most of people using this project.
 
 - Add support for OTP 24. This was achieved by updating Rustler to v0.22.
 
-[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.10.1...v0.11.0
