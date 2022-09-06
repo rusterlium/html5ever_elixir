@@ -6,7 +6,7 @@ defmodule Html5ever.Native do
   version = mix_config[:version]
   github_url = mix_config[:package][:links]["GitHub"]
 
-  env_config = Application.get_env(:html5ever, Html5ever, [])
+  env_config = Application.compile_env(:html5ever, Html5ever, [])
 
   # This module will be replaced by the NIF module after
   # loaded. It throws an error in case the NIF can't be loaded.
