@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2022-11-04
+
+### Changed
+
+- Require `rustler_precompiled` equal or above `v0.5.2` - thanks [@Benjamin-Philip](https://github.com/Benjamin-Philip).
+- Use `Application.compile_env/3` instead of `Application.get_env/3` in the native module.
+
 ## [0.13.1] - 2022-06-24
 
 ### Fixed
@@ -91,7 +98,8 @@ is not needed for most of people using this project.
 
 - Add support for OTP 24. This was achieved by updating Rustler to v0.22.
 
-[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.13.1...HEAD
+[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.11.0...v0.12.0

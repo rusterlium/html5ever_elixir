@@ -12,8 +12,14 @@ The package can be installed by adding `html5ever` to your list of dependencies 
 
 ```elixir
 def deps do
-  [{:html5ever, "~> 0.13.0"}]
+  [{:html5ever, "~> 0.14.0"}]
 end
+```
+
+Or with [`Mix.install/1`](https://hexdocs.pm/mix/Mix.html#install/2):
+
+```elixir
+Mix.install([:html5ever])
 ```
 
 ## Forcing compilation
@@ -33,7 +39,7 @@ the compilation:
 ```elixir
 def deps do
   [
-    {:html5ever, "~> 0.13.0"},
+    {:html5ever, "~> 0.14.0"},
     {:rustler, ">= 0.0.0", optional: true}
   ]
 end
