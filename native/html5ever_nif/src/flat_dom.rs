@@ -1,30 +1,27 @@
-use html5ever::{ QualName, Attribute };
-use html5ever::tree_builder::{ TreeSink, QuirksMode, NodeOrText, ElementFlags };
+use html5ever::tree_builder::{ElementFlags, NodeOrText, QuirksMode, TreeSink};
+use html5ever::{Attribute, QualName};
 use markup5ever::ExpandedName;
 
 use tendril::StrTendril;
 
 use std::borrow::Cow;
 
-use rustler::{ Env, Encoder, Term };
+use rustler::{Encoder, Env, Term};
 
-use crate::common::{ STW, QNW };
+use crate::common::{QNW, STW};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct NodeHandle(pub usize);
 
 pub enum PoolOrVec<T> {
-    Pool {
-        head: usize,
-        len: usize,
-    },
-    Vec {
-        vec: Vec<T>,
-    }
+    Pool { head: usize, len: usize },
+    Vec { vec: Vec<T> },
 }
 
-impl<T> PoolOrVec<T> where T: Clone {
-
+impl<T> PoolOrVec<T>
+where
+    T: Clone,
+{
     pub fn new(pool: &Vec<T>) -> Self {
         PoolOrVec::Pool {
             head: pool.len(),
@@ -34,24 +31,16 @@ impl<T> PoolOrVec<T> where T: Clone {
 
     pub fn get<'a>(&'a self, idx: usize, pool: &'a Vec<T>) -> Option<&'a T> {
         match self {
-            PoolOrVec::Pool { head, len } if idx < *len => {
-                Some(&pool[*head + idx])
-            },
-            PoolOrVec::Vec { vec } => {
-                vec.get(idx)
-            },
+            PoolOrVec::Pool { head, len } if idx < *len => Some(&pool[*head + idx]),
+            PoolOrVec::Vec { vec } => vec.get(idx),
             _ => None,
         }
     }
 
     pub fn as_slice<'a>(&'a self, pool: &'a Vec<T>) -> &'a [T] {
         match self {
-            PoolOrVec::Pool { head, len } => {
-                &pool[*head..(*head + *len)]
-            },
-            PoolOrVec::Vec { vec } => {
-                &*vec
-            },
+            PoolOrVec::Pool { head, len } => &pool[*head..(*head + *len)],
+            PoolOrVec::Vec { vec } => &*vec,
         }
     }
 
@@ -60,21 +49,19 @@ impl<T> PoolOrVec<T> where T: Clone {
             PoolOrVec::Pool { head, len } if pool.len() == *head + *len => {
                 pool.push(item);
                 *len += 1;
-            },
+            }
             val @ PoolOrVec::Pool { .. } => {
                 if let PoolOrVec::Pool { head, len } = val {
                     let mut vec = pool[*head..(*head + *len)].to_owned();
                     vec.push(item);
-                    *val = PoolOrVec::Vec {
-                        vec: vec,
-                    };
+                    *val = PoolOrVec::Vec { vec: vec };
                 } else {
                     unreachable!()
                 }
-            },
+            }
             PoolOrVec::Vec { vec } => {
                 vec.push(item);
-            },
+            }
         }
     }
 
@@ -96,10 +83,10 @@ impl<T> PoolOrVec<T> where T: Clone {
                         vec
                     },
                 };
-            },
+            }
             PoolOrVec::Vec { vec } => {
                 vec.insert(index, item);
-            },
+            }
         }
     }
 
@@ -113,13 +100,12 @@ impl<T> PoolOrVec<T> where T: Clone {
                         vec
                     },
                 };
-            },
+            }
             PoolOrVec::Vec { vec } => {
                 vec.remove(index);
-            },
+            }
         }
     }
-
 }
 
 pub struct Node {
@@ -140,7 +126,7 @@ impl Node {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum NodeData{
+pub enum NodeData {
     Document,
     DocType {
         name: StrTendril,
@@ -172,7 +158,6 @@ pub struct FlatSink {
 }
 
 impl FlatSink {
-
     pub fn new() -> FlatSink {
         let mut sink = FlatSink {
             root: NodeHandle(0),
@@ -181,7 +166,8 @@ impl FlatSink {
         };
 
         // Element 0 is always root
-        sink.nodes.push(Node::new(0, NodeData::Document, &sink.pool));
+        sink.nodes
+            .push(Node::new(0, NodeData::Document, &sink.pool));
 
         sink
     }
@@ -203,17 +189,12 @@ impl FlatSink {
         self.nodes.push(node);
         id
     }
-
 }
 
 fn node_or_text_to_node(sink: &mut FlatSink, not: NodeOrText<NodeHandle>) -> NodeHandle {
     match not {
         NodeOrText::AppendNode(handle) => handle,
-        NodeOrText::AppendText(text) => {
-            sink.make_node(NodeData::Text {
-                contents: text,
-            })
-        },
+        NodeOrText::AppendText(text) => sink.make_node(NodeData::Text { contents: text }),
     }
 }
 
@@ -229,12 +210,16 @@ impl TreeSink for FlatSink {
     fn parse_error(&mut self, _msg: Cow<'static, str>) {}
     fn set_quirks_mode(&mut self, _mode: QuirksMode) {}
 
-    fn get_document(&mut self) -> Self::Handle { NodeHandle(0) }
+    fn get_document(&mut self) -> Self::Handle {
+        NodeHandle(0)
+    }
     fn get_template_contents(&mut self, _target: &Self::Handle) -> Self::Handle {
         panic!("Templates not supported");
     }
 
-    fn same_node(&self, x: &Self::Handle, y: &Self::Handle) -> bool { x == y }
+    fn same_node(&self, x: &Self::Handle, y: &Self::Handle) -> bool {
+        x == y
+    }
     fn elem_name(&self, target: &Self::Handle) -> ExpandedName {
         let node = self.node(*target);
         match node.data {
@@ -243,7 +228,12 @@ impl TreeSink for FlatSink {
         }
     }
 
-    fn create_element(&mut self, name: QualName, attrs: Vec<Attribute>, flags: ElementFlags) -> Self::Handle {
+    fn create_element(
+        &mut self,
+        name: QualName,
+        attrs: Vec<Attribute>,
+        flags: ElementFlags,
+    ) -> Self::Handle {
         let template_contents = if flags.template {
             Some(self.make_node(NodeData::Document))
         } else {
@@ -259,22 +249,24 @@ impl TreeSink for FlatSink {
     }
 
     fn create_comment(&mut self, text: StrTendril) -> Self::Handle {
-        self.make_node(NodeData::Comment {
-            contents: text,
-        })
+        self.make_node(NodeData::Comment { contents: text })
     }
 
     fn append(&mut self, parent_id: &Self::Handle, child: NodeOrText<Self::Handle>) {
         let handle = node_or_text_to_node(self, child);
 
-        self.nodes[parent_id.0].children.push(handle, &mut self.pool);
+        self.nodes[parent_id.0]
+            .children
+            .push(handle, &mut self.pool);
         self.node_mut(handle).parent = Some(*parent_id);
     }
 
-    fn append_based_on_parent_node(&mut self,
-                                   element: &Self::Handle,
-                                   prev_element: &Self::Handle,
-                                   child: NodeOrText<Self::Handle>) {
+    fn append_based_on_parent_node(
+        &mut self,
+        element: &Self::Handle,
+        prev_element: &Self::Handle,
+        child: NodeOrText<Self::Handle>,
+    ) {
         let has_parent = self.node(*element).parent.is_some();
         if has_parent {
             self.append_before_sibling(element, child);
@@ -283,17 +275,33 @@ impl TreeSink for FlatSink {
         }
     }
 
-    fn append_before_sibling(&mut self, sibling: &Self::Handle, new_node: NodeOrText<Self::Handle>) {
+    fn append_before_sibling(
+        &mut self,
+        sibling: &Self::Handle,
+        new_node: NodeOrText<Self::Handle>,
+    ) {
         let new_node_handle = node_or_text_to_node(self, new_node);
 
         let parent = self.node(*sibling).parent.unwrap();
         let parent_node = &mut self.nodes[parent.0];
-        let sibling_index = parent_node.children.iter(&self.pool).enumerate()
-            .find(|&(_, node)| node == sibling).unwrap().0;
-        parent_node.children.insert(sibling_index, new_node_handle, &mut self.pool);
+        let sibling_index = parent_node
+            .children
+            .iter(&self.pool)
+            .enumerate()
+            .find(|&(_, node)| node == sibling)
+            .unwrap()
+            .0;
+        parent_node
+            .children
+            .insert(sibling_index, new_node_handle, &mut self.pool);
     }
 
-    fn append_doctype_to_document(&mut self, name: StrTendril, public_id: StrTendril, system_id: StrTendril) {
+    fn append_doctype_to_document(
+        &mut self,
+        name: StrTendril,
+        public_id: StrTendril,
+        system_id: StrTendril,
+    ) {
         let doctype = self.make_node(NodeData::DocType {
             name: name,
             public_id: public_id,
@@ -304,7 +312,11 @@ impl TreeSink for FlatSink {
         self.node_mut(doctype).parent = Some(self.root);
     }
 
-    fn add_attrs_if_missing(&mut self, target_handle: &Self::Handle, mut add_attrs: Vec<Attribute>) {
+    fn add_attrs_if_missing(
+        &mut self,
+        target_handle: &Self::Handle,
+        mut add_attrs: Vec<Attribute>,
+    ) {
         let target = self.node_mut(*target_handle);
         match target.data {
             NodeData::Element { ref mut attrs, .. } => {
@@ -321,8 +333,13 @@ impl TreeSink for FlatSink {
     fn remove_from_parent(&mut self, target: &Self::Handle) {
         let parent = self.node(*target).parent.unwrap();
         let parent_node = &mut self.nodes[parent.0];
-        let sibling_index = parent_node.children.iter(&self.pool).enumerate()
-            .find(|&(_, node)| node == target).unwrap().0;
+        let sibling_index = parent_node
+            .children
+            .iter(&self.pool)
+            .enumerate()
+            .find(|&(_, node)| node == target)
+            .unwrap()
+            .0;
         parent_node.children.remove(sibling_index, &mut self.pool);
     }
 
@@ -351,7 +368,6 @@ impl TreeSink for FlatSink {
             contents: data,
         })
     }
-
 }
 
 impl Encoder for NodeHandle {
@@ -362,40 +378,90 @@ impl Encoder for NodeHandle {
 
 fn encode_node<'a>(node: &Node, env: Env<'a>, pool: &Vec<NodeHandle>) -> Term<'a> {
     let map = ::rustler::types::map::map_new(env)
-        .map_put(self::atoms::id().encode(env), node.id.encode(env)).ok().unwrap()
-        .map_put(self::atoms::parent().encode(env), match node.parent {
-            Some(handle) => handle.encode(env),
-            None => self::atoms::nil().encode(env),
-        }).ok().unwrap();
+        .map_put(self::atoms::id().encode(env), node.id.encode(env))
+        .ok()
+        .unwrap()
+        .map_put(
+            self::atoms::parent().encode(env),
+            match node.parent {
+                Some(handle) => handle.encode(env),
+                None => self::atoms::nil().encode(env),
+            },
+        )
+        .ok()
+        .unwrap();
 
     match node.data {
-        NodeData::Document => {
-            map
-                .map_put(self::atoms::type_().encode(env), self::atoms::document().encode(env)).ok().unwrap()
-        }
-        NodeData::Element { ref attrs, ref name, .. } => {
-            map
-                .map_put(self::atoms::type_().encode(env), self::atoms::element().encode(env)).ok().unwrap()
-                .map_put(self::atoms::children().encode(env), node.children.as_slice(pool).encode(env)).ok().unwrap()
-                .map_put(self::atoms::name().encode(env), QNW(name).encode(env)).ok().unwrap()
-                .map_put(self::atoms::attrs().encode(env), attrs.iter().map(|attr| {
-                    (QNW(&attr.name), STW(&attr.value))
-                }).collect::<Vec<_>>().encode(env)).ok().unwrap()
-        }
-        NodeData::Text { ref contents } => {
-            map
-                .map_put(self::atoms::type_().encode(env), self::atoms::text().encode(env)).ok().unwrap()
-                .map_put(self::atoms::contents().encode(env), STW(contents).encode(env)).ok().unwrap()
-        }
-        NodeData::DocType { .. } => {
-            map
-                .map_put(self::atoms::type_().encode(env), self::atoms::doctype().encode(env)).ok().unwrap()
-        }
-        NodeData::Comment { ref contents } => {
-            map
-                .map_put(self::atoms::type_().encode(env), self::atoms::comment().encode(env)).ok().unwrap()
-                .map_put(self::atoms::contents().encode(env), STW(contents).encode(env)).ok().unwrap()
-        }
+        NodeData::Document => map
+            .map_put(
+                self::atoms::type_().encode(env),
+                self::atoms::document().encode(env),
+            )
+            .ok()
+            .unwrap(),
+        NodeData::Element {
+            ref attrs,
+            ref name,
+            ..
+        } => map
+            .map_put(
+                self::atoms::type_().encode(env),
+                self::atoms::element().encode(env),
+            )
+            .ok()
+            .unwrap()
+            .map_put(
+                self::atoms::children().encode(env),
+                node.children.as_slice(pool).encode(env),
+            )
+            .ok()
+            .unwrap()
+            .map_put(self::atoms::name().encode(env), QNW(name).encode(env))
+            .ok()
+            .unwrap()
+            .map_put(
+                self::atoms::attrs().encode(env),
+                attrs
+                    .iter()
+                    .map(|attr| (QNW(&attr.name), STW(&attr.value)))
+                    .collect::<Vec<_>>()
+                    .encode(env),
+            )
+            .ok()
+            .unwrap(),
+        NodeData::Text { ref contents } => map
+            .map_put(
+                self::atoms::type_().encode(env),
+                self::atoms::text().encode(env),
+            )
+            .ok()
+            .unwrap()
+            .map_put(
+                self::atoms::contents().encode(env),
+                STW(contents).encode(env),
+            )
+            .ok()
+            .unwrap(),
+        NodeData::DocType { .. } => map
+            .map_put(
+                self::atoms::type_().encode(env),
+                self::atoms::doctype().encode(env),
+            )
+            .ok()
+            .unwrap(),
+        NodeData::Comment { ref contents } => map
+            .map_put(
+                self::atoms::type_().encode(env),
+                self::atoms::comment().encode(env),
+            )
+            .ok()
+            .unwrap()
+            .map_put(
+                self::atoms::contents().encode(env),
+                STW(contents).encode(env),
+            )
+            .ok()
+            .unwrap(),
         _ => unimplemented!(),
     }
 }
@@ -423,14 +489,22 @@ mod atoms {
 }
 
 pub fn flat_sink_to_flat_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
-    let nodes = sink.nodes.iter()
+    let nodes = sink
+        .nodes
+        .iter()
         .fold(rustler::types::map::map_new(env), |acc, node| {
-            acc.map_put(node.id.encode(env), encode_node(node, env, &sink.pool)).ok().unwrap()
+            acc.map_put(node.id.encode(env), encode_node(node, env, &sink.pool))
+                .ok()
+                .unwrap()
         });
 
     ::rustler::types::map::map_new(env)
-        .map_put(self::atoms::nodes().encode(env), nodes).ok().unwrap()
-        .map_put(self::atoms::root().encode(env), sink.root.encode(env)).ok().unwrap()
+        .map_put(self::atoms::nodes().encode(env), nodes)
+        .ok()
+        .unwrap()
+        .map_put(self::atoms::root().encode(env), sink.root.encode(env))
+        .ok()
+        .unwrap()
 }
 
 struct RecState {
@@ -442,13 +516,11 @@ struct RecState {
 pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
     let mut child_stack = vec![];
 
-    let mut stack: Vec<RecState> = vec![
-        RecState {
-            node: sink.root(),
-            child_base: 0,
-            child_n: 0,
-        },
-    ];
+    let mut stack: Vec<RecState> = vec![RecState {
+        node: sink.root(),
+        child_base: 0,
+        child_n: 0,
+    }];
 
     loop {
         let mut top = stack.pop().unwrap();
@@ -483,8 +555,12 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
 
                     assert_eq!(stack.len(), 0);
                     return term;
-                },
-                NodeData::DocType { name, public_id, system_id }  => {
+                }
+                NodeData::DocType {
+                    name,
+                    public_id,
+                    system_id,
+                } => {
                     assert!(stack.len() > 0);
                     assert!(child_stack.len() == 0);
 
@@ -493,22 +569,24 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
                         STW(name),
                         STW(public_id),
                         STW(system_id),
-                    ).encode(env);
-                },
+                    )
+                        .encode(env);
+                }
                 NodeData::Element { attrs, name, .. } => {
                     assert!(stack.len() > 0);
 
-                    let attribute_terms: Vec<Term<'a>> = attrs.iter()
+                    let attribute_terms: Vec<Term<'a>> = attrs
+                        .iter()
                         .map(|a| (QNW(&a.name), STW(&a.value)).encode(env))
                         .collect();
                     term = (QNW(name), attribute_terms, &child_stack[top.child_base..]).encode(env);
                     for _ in 0..(child_stack.len() - top.child_base) {
                         child_stack.pop();
                     }
-                },
+                }
                 NodeData::Text { contents } => {
                     term = STW(contents).encode(env);
-                },
+                }
                 NodeData::Comment { .. } => continue,
                 _ => unimplemented!(""),
             }
@@ -517,12 +595,3 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
         }
     }
 }
-
-
-
-
-
-
-
-
-
