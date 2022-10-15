@@ -54,7 +54,7 @@ where
                 if let PoolOrVec::Pool { head, len } = val {
                     let mut vec = pool[*head..(*head + *len)].to_owned();
                     vec.push(item);
-                    *val = PoolOrVec::Vec { vec: vec };
+                    *val = PoolOrVec::Vec { vec };
                 } else {
                     unreachable!()
                 }
@@ -120,7 +120,7 @@ impl Node {
             id: NodeHandle(id),
             parent: None,
             children: PoolOrVec::new(pool),
-            data: data,
+            data,
         }
     }
 }
@@ -241,10 +241,10 @@ impl TreeSink for FlatSink {
         };
 
         self.make_node(NodeData::Element {
-            name: name,
-            attrs: attrs,
+            name,
+            attrs,
             mathml_annotation_xml_integration_point: flags.mathml_annotation_xml_integration_point,
-            template_contents: template_contents,
+            template_contents,
         })
     }
 
@@ -303,9 +303,9 @@ impl TreeSink for FlatSink {
         system_id: StrTendril,
     ) {
         let doctype = self.make_node(NodeData::DocType {
-            name: name,
-            public_id: public_id,
-            system_id: system_id,
+            name,
+            public_id,
+            system_id,
         });
         let root = self.root;
         self.nodes[root.0].children.push(doctype, &mut self.pool);
@@ -364,7 +364,7 @@ impl TreeSink for FlatSink {
 
     fn create_pi(&mut self, target: StrTendril, data: StrTendril) -> Self::Handle {
         self.make_node(NodeData::ProcessingInstruction {
-            target: target,
+            target,
             contents: data,
         })
     }
