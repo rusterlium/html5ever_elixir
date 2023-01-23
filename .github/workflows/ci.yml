@@ -8,9 +8,10 @@ on:
 
 jobs:
   mix_test:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     env:
       MIX_ENV: test
+      HTML5EVER_BUILD: "true"
 
     name: Elixir ${{ matrix.pair.elixir }} / OTP ${{ matrix.pair.otp }}
 
@@ -19,25 +20,22 @@ jobs:
       matrix:
         include:
           - pair:
-              elixir: 1.11.2
-              otp: 23.1.4
+              elixir: 1.11.4
+              otp: 23.3.4
           - pair:
-              elixir: 1.12.3
-              otp: 24.1.1
+              elixir: 1.14.3
+              otp: 25.2.1
             lint: lint
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: erlef/setup-beam@v1
+      - uses: erlef/setup-beam@v1.15
         with:
-          otp-version: ${{matrix.pair.otp}}
-          elixir-version: ${{matrix.pair.elixir}}
+          otp-version: ${{ matrix.pair.otp }}
+          elixir-version: ${{ matrix.pair.elixir }}
 
       - name: Install minimal stable Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install Dependencies
         run: mix deps.get
@@ -48,9 +46,9 @@ jobs:
       - run: mix deps.unlock --check-unused
         if: ${{ matrix.lint }}
 
-      - run: HTML5EVER_BUILD=1 mix deps.compile
+      - run: mix deps.compile
 
-      - run: HTML5EVER_BUILD=1 mix compile --warnings-as-errors
+      - run: mix compile --warnings-as-errors
         if: ${{ matrix.lint }}
 
-      - run: HTML5EVER_BUILD=1 mix test
+      - run: mix test
