@@ -2,7 +2,7 @@
 name = "html5ever_nif"
 version = "0.1.0"
 authors = ["HansiHE <hansihe@hansihe.com>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "html5ever_nif"
@@ -17,5 +17,3 @@ markup5ever = "0.11"
 
 tendril = "0.4"
 lazy_static = "1.4"
-scoped-pool = "1.0"
-
