@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2023-05-20
+
+### Added
+
+- Add support for `rustler_precompiled` v0.6.
+
+### Changed
+
+- Update Rustler version in the crate from `v0.26` to `v0.28`.
+  This shouldn't break anything, but would require the installation of rustler `v0.28`
+  if needed in the Elixir side.
+
+- Change the Rust edition to 2021 (it was 2018). This shouldn't change any behaviour.
+
 ## [0.14.0] - 2022-11-04
 
 ### Changed
@@ -98,7 +112,8 @@ is not needed for most of people using this project.
 
 - Add support for OTP 24. This was achieved by updating Rustler to v0.22.
 
-[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.1...HEAD
+[0.14.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.12.0...v0.13.0
