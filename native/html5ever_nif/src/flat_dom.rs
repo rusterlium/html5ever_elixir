@@ -40,7 +40,7 @@ where
     pub fn as_slice<'a>(&'a self, pool: &'a Vec<T>) -> &'a [T] {
         match self {
             PoolOrVec::Pool { head, len } => &pool[*head..(*head + *len)],
-            PoolOrVec::Vec { vec } => &*vec,
+            PoolOrVec::Vec { vec } => vec,
         }
     }
 
@@ -176,10 +176,10 @@ impl FlatSink {
         self.root
     }
 
-    pub fn node_mut<'a>(&'a mut self, handle: NodeHandle) -> &'a mut Node {
+    pub fn node_mut(&mut self, handle: NodeHandle) -> &mut Node {
         &mut self.nodes[handle.0]
     }
-    pub fn node<'a>(&'a self, handle: NodeHandle) -> &'a Node {
+    pub fn node(&self, handle: NodeHandle) -> &Node {
         &self.nodes[handle.0]
     }
 
@@ -321,7 +321,7 @@ impl TreeSink for FlatSink {
         match target.data {
             NodeData::Element { ref mut attrs, .. } => {
                 for attr in add_attrs.drain(..) {
-                    if attrs.iter().find(|a| attr.name == a.name) == None {
+                    if !attrs.iter().any(|a| attr.name == a.name) {
                         attrs.push(attr);
                     }
                 }
@@ -561,8 +561,8 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
                     public_id,
                     system_id,
                 } => {
-                    assert!(stack.len() > 0);
-                    assert!(child_stack.len() == 0);
+                    assert!(!stack.is_empty());
+                    assert!(child_stack.is_empty());
 
                     term = (
                         self::atoms::doctype(),
@@ -573,7 +573,7 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
                         .encode(env);
                 }
                 NodeData::Element { attrs, name, .. } => {
-                    assert!(stack.len() > 0);
+                    assert!(!stack.is_empty());
 
                     let attribute_terms: Vec<Term<'a>> = attrs
                         .iter()

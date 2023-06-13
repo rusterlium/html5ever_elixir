@@ -12,13 +12,13 @@ pub struct STW<'a>(pub &'a StrTendril);
 
 impl<'b> Encoder for QNW<'b> {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
-        let data: &str = &*self.0.local;
+        let data: &str = &self.0.local;
         data.encode(env)
     }
 }
 impl<'b> Encoder for STW<'b> {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
-        let data: &str = &*self.0;
+        let data: &str = self.0;
         data.encode(env)
     }
 }
