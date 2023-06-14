@@ -8,7 +8,7 @@ use std::borrow::Cow;
 
 use rustler::{Encoder, Env, Term};
 
-use crate::common::{QNW, STW};
+use crate::common::{QualNameWrapper, StrTendrilWrapper};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct NodeHandle(pub usize);
@@ -29,7 +29,7 @@ where
         }
     }
 
-    pub fn get<'a>(&'a self, idx: usize, pool: &'a Vec<T>) -> Option<&'a T> {
+    pub fn get<'a>(&'a self, idx: usize, pool: &'a [T]) -> Option<&'a T> {
         match self {
             PoolOrVec::Pool { head, len } if idx < *len => Some(&pool[*head + idx]),
             PoolOrVec::Vec { vec } => vec.get(idx),
@@ -37,7 +37,7 @@ where
         }
     }
 
-    pub fn as_slice<'a>(&'a self, pool: &'a Vec<T>) -> &'a [T] {
+    pub fn as_slice<'a>(&'a self, pool: &'a [T]) -> &'a [T] {
         match self {
             PoolOrVec::Pool { head, len } => &pool[*head..(*head + *len)],
             PoolOrVec::Vec { vec } => vec,
@@ -65,7 +65,7 @@ where
         }
     }
 
-    pub fn iter<'a>(&'a self, pool: &'a Vec<T>) -> impl Iterator<Item = &'a T> + 'a {
+    pub fn iter<'a>(&'a self, pool: &'a [T]) -> impl Iterator<Item = &'a T> + 'a {
         self.as_slice(pool).iter()
     }
 
@@ -90,7 +90,7 @@ where
         }
     }
 
-    pub fn remove(&mut self, index: usize, pool: &mut Vec<T>) {
+    pub fn remove(&mut self, index: usize, pool: &mut [T]) {
         match self {
             val @ PoolOrVec::Pool { .. } => {
                 *val = PoolOrVec::Vec {
@@ -376,7 +376,7 @@ impl Encoder for NodeHandle {
     }
 }
 
-fn encode_node<'a>(node: &Node, env: Env<'a>, pool: &Vec<NodeHandle>) -> Term<'a> {
+fn encode_node<'a>(node: &Node, env: Env<'a>, pool: &[NodeHandle]) -> Term<'a> {
     let map = ::rustler::types::map::map_new(env)
         .map_put(self::atoms::id().encode(env), node.id.encode(env))
         .ok()
@@ -416,14 +416,17 @@ fn encode_node<'a>(node: &Node, env: Env<'a>, pool: &Vec<NodeHandle>) -> Term<'a
             )
             .ok()
             .unwrap()
-            .map_put(self::atoms::name().encode(env), QNW(name).encode(env))
+            .map_put(
+                self::atoms::name().encode(env),
+                QualNameWrapper(name).encode(env),
+            )
             .ok()
             .unwrap()
             .map_put(
                 self::atoms::attrs().encode(env),
                 attrs
                     .iter()
-                    .map(|attr| (QNW(&attr.name), STW(&attr.value)))
+                    .map(|attr| (QualNameWrapper(&attr.name), StrTendrilWrapper(&attr.value)))
                     .collect::<Vec<_>>()
                     .encode(env),
             )
@@ -438,7 +441,7 @@ fn encode_node<'a>(node: &Node, env: Env<'a>, pool: &Vec<NodeHandle>) -> Term<'a
             .unwrap()
             .map_put(
                 self::atoms::contents().encode(env),
-                STW(contents).encode(env),
+                StrTendrilWrapper(contents).encode(env),
             )
             .ok()
             .unwrap(),
@@ -458,7 +461,7 @@ fn encode_node<'a>(node: &Node, env: Env<'a>, pool: &Vec<NodeHandle>) -> Term<'a
             .unwrap()
             .map_put(
                 self::atoms::contents().encode(env),
-                STW(contents).encode(env),
+                StrTendrilWrapper(contents).encode(env),
             )
             .ok()
             .unwrap(),
@@ -566,9 +569,9 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
 
                     term = (
                         self::atoms::doctype(),
-                        STW(name),
-                        STW(public_id),
-                        STW(system_id),
+                        StrTendrilWrapper(name),
+                        StrTendrilWrapper(public_id),
+                        StrTendrilWrapper(system_id),
                     )
                         .encode(env);
                 }
@@ -577,15 +580,22 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
 
                     let attribute_terms: Vec<Term<'a>> = attrs
                         .iter()
-                        .map(|a| (QNW(&a.name), STW(&a.value)).encode(env))
+                        .map(|a| {
+                            (QualNameWrapper(&a.name), StrTendrilWrapper(&a.value)).encode(env)
+                        })
                         .collect();
-                    term = (QNW(name), attribute_terms, &child_stack[top.child_base..]).encode(env);
+                    term = (
+                        QualNameWrapper(name),
+                        attribute_terms,
+                        &child_stack[top.child_base..],
+                    )
+                        .encode(env);
                     for _ in 0..(child_stack.len() - top.child_base) {
                         child_stack.pop();
                     }
                 }
                 NodeData::Text { contents } => {
-                    term = STW(contents).encode(env);
+                    term = StrTendrilWrapper(contents).encode(env);
                 }
                 NodeData::Comment { .. } => continue,
                 _ => unimplemented!(""),

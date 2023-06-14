@@ -7,16 +7,16 @@ use tendril::StrTendril;
 // Encoder for these externally defined types.
 // Unsure if this is a great way of doing it, but it's the way
 // that produced the cleanest and least noisy code.
-pub struct QNW<'a>(pub &'a QualName);
-pub struct STW<'a>(pub &'a StrTendril);
+pub struct QualNameWrapper<'a>(pub &'a QualName);
+pub struct StrTendrilWrapper<'a>(pub &'a StrTendril);
 
-impl<'b> Encoder for QNW<'b> {
+impl<'b> Encoder for QualNameWrapper<'b> {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         let data: &str = &self.0.local;
         data.encode(env)
     }
 }
-impl<'b> Encoder for STW<'b> {
+impl<'b> Encoder for StrTendrilWrapper<'b> {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         let data: &str = self.0;
         data.encode(env)
