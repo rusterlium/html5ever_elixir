@@ -37,8 +37,30 @@ defmodule Html5ever do
        ]}
 
   """
-  def parse(html) do
-    parse_dirty(html)
+  def parse(html) when is_binary(html) do
+    Html5ever.Native.parse(html, false)
+  end
+
+  @doc """
+  Same as `parse/1`, but with attributes as maps.
+
+  This is going to remove duplicated attributes, keeping the ones
+  that appear first.
+
+  ## Example
+
+      iex> Html5ever.parse_with_attributes_as_maps(
+      ...>   "<!doctype html><html><body><h1 class=title>Hello world</h1></body></html>"
+      ...> )
+      {:ok,
+       [
+         {:doctype, "html", "", ""},
+         {"html", %{}, [{"head", %{}, []}, {"body", %{}, [{"h1", %{"class" => "title"}, ["Hello world"]}]}]}
+       ]}
+
+  """
+  def parse_with_attributes_as_maps(html) when is_binary(html) do
+    Html5ever.Native.parse(html, true)
   end
 
   @doc """
@@ -93,26 +115,16 @@ defmodule Html5ever do
 
   """
   def flat_parse(html) do
-    flat_parse_dirty(html)
+    Html5ever.Native.flat_parse(html, false)
   end
 
-  defp parse_dirty(html) do
-    case Html5ever.Native.parse_sync(html) do
-      {:html5ever_nif_result, :ok, result} ->
-        {:ok, result}
+  @doc """
+  Same as `flat_parse/1`, but with attributes as maps.
 
-      {:html5ever_nif_result, :error, err} ->
-        {:error, err}
-    end
-  end
-
-  defp flat_parse_dirty(html) do
-    case Html5ever.Native.flat_parse_sync(html) do
-      {:html5ever_nif_result, :ok, result} ->
-        {:ok, result}
-
-      {:html5ever_nif_result, :error, err} ->
-        {:error, err}
-    end
+  This is going to remove duplicated attributes, keeping the ones
+  that appear first.
+  """
+  def flat_parse_with_attributes_as_maps(html) when is_binary(html) do
+    Html5ever.Native.flat_parse(html, true)
   end
 end

@@ -376,7 +376,12 @@ impl Encoder for NodeHandle {
     }
 }
 
-fn encode_node<'a>(node: &Node, env: Env<'a>, pool: &[NodeHandle]) -> Term<'a> {
+fn encode_node<'a>(
+    node: &Node,
+    env: Env<'a>,
+    pool: &[NodeHandle],
+    attributes_as_maps: bool,
+) -> Term<'a> {
     let map = ::rustler::types::map::map_new(env)
         .map_put(self::atoms::id().encode(env), node.id.encode(env))
         .ok()
@@ -424,11 +429,7 @@ fn encode_node<'a>(node: &Node, env: Env<'a>, pool: &[NodeHandle]) -> Term<'a> {
             .unwrap()
             .map_put(
                 self::atoms::attrs().encode(env),
-                attrs
-                    .iter()
-                    .map(|attr| (QualNameWrapper(&attr.name), StrTendrilWrapper(&attr.value)))
-                    .collect::<Vec<_>>()
-                    .encode(env),
+                attributes_to_term(env, attrs, attributes_as_maps),
             )
             .ok()
             .unwrap(),
@@ -491,14 +492,21 @@ mod atoms {
     }
 }
 
-pub fn flat_sink_to_flat_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
+pub fn flat_sink_to_flat_term<'a>(
+    env: Env<'a>,
+    sink: &FlatSink,
+    attributes_as_maps: bool,
+) -> Term<'a> {
     let nodes = sink
         .nodes
         .iter()
         .fold(rustler::types::map::map_new(env), |acc, node| {
-            acc.map_put(node.id.encode(env), encode_node(node, env, &sink.pool))
-                .ok()
-                .unwrap()
+            acc.map_put(
+                node.id.encode(env),
+                encode_node(node, env, &sink.pool, attributes_as_maps),
+            )
+            .ok()
+            .unwrap()
         });
 
     ::rustler::types::map::map_new(env)
@@ -516,7 +524,11 @@ struct RecState {
     child_base: usize,
 }
 
-pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
+pub fn flat_sink_to_rec_term<'a>(
+    env: Env<'a>,
+    sink: &FlatSink,
+    attributes_as_maps: bool,
+) -> Term<'a> {
     let mut child_stack = vec![];
 
     let mut stack: Vec<RecState> = vec![RecState {
@@ -578,12 +590,8 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
                 NodeData::Element { attrs, name, .. } => {
                     assert!(!stack.is_empty());
 
-                    let attribute_terms: Vec<Term<'a>> = attrs
-                        .iter()
-                        .map(|a| {
-                            (QualNameWrapper(&a.name), StrTendrilWrapper(&a.value)).encode(env)
-                        })
-                        .collect();
+                    let attribute_terms = attributes_to_term(env, attrs, attributes_as_maps);
+
                     term = (
                         QualNameWrapper(name),
                         attribute_terms,
@@ -603,5 +611,22 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
 
             child_stack.push(term);
         }
+    }
+}
+
+fn attributes_to_term<'a>(
+    env: Env<'a>,
+    attributes: &[Attribute],
+    attributes_as_maps: bool,
+) -> Term<'a> {
+    let pairs: Vec<(QualNameWrapper, StrTendrilWrapper)> = attributes
+        .iter()
+        .map(|a| (QualNameWrapper(&a.name), StrTendrilWrapper(&a.value)))
+        .collect();
+
+    if attributes_as_maps {
+        Term::map_from_pairs(env, &pairs).unwrap()
+    } else {
+        pairs.encode(env)
     }
 }
