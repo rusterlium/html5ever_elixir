@@ -9,6 +9,7 @@ use std::borrow::Cow;
 use rustler::{Encoder, Env, Term};
 
 use crate::common::{QualNameWrapper, StrTendrilWrapper};
+use crate::Html5everExError;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct NodeHandle(pub usize);
@@ -376,25 +377,28 @@ impl Encoder for NodeHandle {
     }
 }
 
+fn insert_error(_err: rustler::error::Error) -> Html5everExError {
+    Html5everExError::MapEntry
+}
+
 fn encode_node<'a>(
     node: &Node,
     env: Env<'a>,
     pool: &[NodeHandle],
     attributes_as_maps: bool,
-) -> Term<'a> {
-    let map = ::rustler::types::map::map_new(env)
-        .map_put(self::atoms::id().encode(env), node.id.encode(env))
-        .ok()
-        .unwrap()
-        .map_put(
+) -> Result<Term<'a>, Html5everExError> {
+    let pairs: Vec<(Term, Term)> = vec![
+        (self::atoms::id().encode(env), node.id.encode(env)),
+        (
             self::atoms::parent().encode(env),
             match node.parent {
                 Some(handle) => handle.encode(env),
                 None => self::atoms::nil().encode(env),
             },
-        )
-        .ok()
-        .unwrap();
+        ),
+    ];
+
+    let mut map = Term::map_from_pairs(env, &pairs).map_err(insert_error)?;
 
     match node.data {
         NodeData::Document => map
@@ -402,70 +406,65 @@ fn encode_node<'a>(
                 self::atoms::type_().encode(env),
                 self::atoms::document().encode(env),
             )
-            .ok()
-            .unwrap(),
+            .map_err(insert_error),
         NodeData::Element {
             ref attrs,
             ref name,
             ..
-        } => map
-            .map_put(
-                self::atoms::type_().encode(env),
-                self::atoms::element().encode(env),
-            )
-            .ok()
-            .unwrap()
-            .map_put(
-                self::atoms::children().encode(env),
-                node.children.as_slice(pool).encode(env),
-            )
-            .ok()
-            .unwrap()
-            .map_put(
-                self::atoms::name().encode(env),
-                QualNameWrapper(name).encode(env),
-            )
-            .ok()
-            .unwrap()
-            .map_put(
-                self::atoms::attrs().encode(env),
-                attributes_to_term(env, attrs, attributes_as_maps),
-            )
-            .ok()
-            .unwrap(),
+        } => {
+            let pairs: Vec<(Term, Term)> = vec![
+                (
+                    self::atoms::type_().encode(env),
+                    self::atoms::element().encode(env),
+                ),
+                (
+                    self::atoms::children().encode(env),
+                    node.children.as_slice(pool).encode(env),
+                ),
+                (
+                    self::atoms::name().encode(env),
+                    QualNameWrapper(name).encode(env),
+                ),
+                (
+                    self::atoms::attrs().encode(env),
+                    attributes_to_term(env, attrs, attributes_as_maps),
+                ),
+            ];
+
+            for (key, value) in pairs {
+                map = map.map_put(key, value).map_err(insert_error)?;
+            }
+
+            Ok(map)
+        }
         NodeData::Text { ref contents } => map
             .map_put(
                 self::atoms::type_().encode(env),
                 self::atoms::text().encode(env),
             )
-            .ok()
-            .unwrap()
+            .map_err(insert_error)?
             .map_put(
                 self::atoms::contents().encode(env),
                 StrTendrilWrapper(contents).encode(env),
             )
-            .ok()
-            .unwrap(),
+            .map_err(insert_error),
         NodeData::DocType { .. } => map
             .map_put(
                 self::atoms::type_().encode(env),
                 self::atoms::doctype().encode(env),
             )
-            .ok()
-            .unwrap(),
+            .map_err(insert_error),
         NodeData::Comment { ref contents } => map
             .map_put(
                 self::atoms::type_().encode(env),
                 self::atoms::comment().encode(env),
             )
-            .ok()
-            .unwrap()
+            .map_err(insert_error)?
             .map_put(
                 self::atoms::contents().encode(env),
                 StrTendrilWrapper(contents).encode(env),
             )
-            .ok()
-            .unwrap(),
+            .map_err(insert_error),
         _ => unimplemented!(),
     }
 }
@@ -496,26 +495,23 @@ pub fn flat_sink_to_flat_term<'a>(
     env: Env<'a>,
     sink: &FlatSink,
     attributes_as_maps: bool,
-) -> Term<'a> {
-    let nodes = sink
-        .nodes
-        .iter()
-        .fold(rustler::types::map::map_new(env), |acc, node| {
-            acc.map_put(
+) -> Result<Term<'a>, Html5everExError> {
+    let mut nodes_map = rustler::types::map::map_new(env);
+
+    for node in sink.nodes.iter() {
+        nodes_map = nodes_map
+            .map_put(
                 node.id.encode(env),
-                encode_node(node, env, &sink.pool, attributes_as_maps),
+                encode_node(node, env, &sink.pool, attributes_as_maps)?,
             )
-            .ok()
-            .unwrap()
-        });
+            .map_err(insert_error)?;
+    }
 
     ::rustler::types::map::map_new(env)
-        .map_put(self::atoms::nodes().encode(env), nodes)
-        .ok()
-        .unwrap()
+        .map_put(self::atoms::nodes().encode(env), nodes_map)
+        .map_err(insert_error)?
         .map_put(self::atoms::root().encode(env), sink.root.encode(env))
-        .ok()
-        .unwrap()
+        .map_err(insert_error)
 }
 
 struct RecState {
@@ -528,7 +524,7 @@ pub fn flat_sink_to_rec_term<'a>(
     env: Env<'a>,
     sink: &FlatSink,
     attributes_as_maps: bool,
-) -> Term<'a> {
+) -> Result<Term<'a>, Html5everExError> {
     let mut child_stack = vec![];
 
     let mut stack: Vec<RecState> = vec![RecState {
@@ -569,7 +565,7 @@ pub fn flat_sink_to_rec_term<'a>(
                     }
 
                     assert_eq!(stack.len(), 0);
-                    return term;
+                    return Ok(term);
                 }
                 NodeData::DocType {
                     name,

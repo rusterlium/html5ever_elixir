@@ -9,8 +9,17 @@ defmodule Html5everTest do
 
   test "parse basic html" do
     html = "<html><head></head><body></body></html>"
-    ret = {:ok, [{"html", [], [{"head", [], []}, {"body", [], []}]}]}
-    assert Html5ever.parse(html) == ret
+
+    assert Html5ever.parse(html) == {:ok, [{"html", [], [{"head", [], []}, {"body", [], []}]}]}
+  end
+
+  test "does not parse with not valid UTF8 binary" do
+    invalid =
+      <<98, 29, 104, 122, 46, 145, 14, 37, 122, 155, 227, 121, 49, 120, 108, 209, 155, 113, 229,
+        98, 90, 181, 146>>
+
+    assert Html5ever.parse(invalid) ==
+             {:error, "cannot transform bytes from binary to a valid UTF8 string"}
   end
 
   test "flat parse basic html" do
@@ -36,6 +45,15 @@ defmodule Html5everTest do
        }}
 
     assert Html5ever.flat_parse(html) == ret
+  end
+
+  test "does not flat parse with not valid UTF8 binary" do
+    invalid =
+      <<98, 29, 104, 122, 46, 145, 14, 37, 122, 155, 227, 121, 49, 120, 108, 209, 155, 113, 229,
+        98, 90, 181, 146>>
+
+    assert Html5ever.flat_parse(invalid) ==
+             {:error, "cannot transform bytes from binary to a valid UTF8 string"}
   end
 
   test "flat parse basic html with attributes as maps" do

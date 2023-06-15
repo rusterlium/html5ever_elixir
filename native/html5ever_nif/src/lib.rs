@@ -19,13 +19,14 @@ mod atoms {
 pub enum Html5everExError {
     #[error("cannot transform bytes from binary to a valid UTF8 string")]
     BytesToUtf8(#[from] std::str::Utf8Error),
+
+    #[error("cannot insert entry in a map")]
+    MapEntry,
 }
 
 impl rustler::Encoder for Html5everExError {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
-        match self {
-            Html5everExError::BytesToUtf8(ref message) => message.to_string().encode(env),
-        }
+        format!("{self}").encode(env)
     }
 }
 
@@ -37,11 +38,7 @@ fn parse<'a>(
 ) -> Result<Term<'a>, Html5everExError> {
     let flat_sink = build_flat_sink(binary.as_slice())?;
 
-    Ok(flat_dom::flat_sink_to_rec_term(
-        env,
-        &flat_sink,
-        attributes_as_maps,
-    ))
+    flat_dom::flat_sink_to_rec_term(env, &flat_sink, attributes_as_maps)
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]
@@ -52,11 +49,7 @@ fn flat_parse<'a>(
 ) -> Result<Term<'a>, Html5everExError> {
     let flat_sink = build_flat_sink(binary.as_slice())?;
 
-    Ok(flat_dom::flat_sink_to_flat_term(
-        env,
-        &flat_sink,
-        attributes_as_maps,
-    ))
+    flat_dom::flat_sink_to_flat_term(env, &flat_sink, attributes_as_maps)
 }
 
 fn build_flat_sink(bin_slice: &[u8]) -> Result<FlatSink, Html5everExError> {
