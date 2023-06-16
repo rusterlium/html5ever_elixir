@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2023-06-16
+
+### Added
+
+- Add two new functions to parse documents:
+
+  * `parse_with_attributes_as_maps/1`
+  * `flat_parse_with_attributes_as_maps/1`
+
+  And as the names suggest, it returns a document tree with attributes as maps,
+  instead of lists of pairs. These functions are useful to match node attributes,
+  since the order of attributes does not matter must of the times.
+
+### Fixed
+
+- Use dirty CPU scheduler for all functions. For some reason we were using a 
+  normal scheduler, but this could cause instability.
+
+  With a dirty scheduler we can parse medium to big files without worry about
+  lengthy work. Please read https://www.erlang.org/doc/man/erl_nif.html#lengthy_work
+  for further information.
+
+### Removed
+
+- Remove support for Elixir 1.11.
+
 ## [0.14.3] - 2023-05-26
 
 ### Added
@@ -134,7 +160,8 @@ is not needed for most of people using this project.
 
 - Add support for OTP 24. This was achieved by updating Rustler to v0.22.
 
-[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.3...HEAD
+[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.3...v0.15.0
 [0.14.3]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.2...v0.14.3
 [0.14.2]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.0...v0.14.1
