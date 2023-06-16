@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_release:
-    name: NIF ${{ matrix.job.nif }} - ${{ matrix.job.target }} (${{ matrix.job.os }})
+    name: NIF ${{ matrix.nif }} - ${{ matrix.job.target }} (${{ matrix.job.os }})
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -61,6 +61,10 @@ jobs:
       with:
         name: ${{ steps.build-crate.outputs.file-name }}
         path: ${{ steps.build-crate.outputs.file-path }}
+
+    - name: Write SHA256 to the summary
+      run: |
+        echo "${{ steps.build-crate.outputs.file-sha256 }}  ${{ steps.build-crate.outputs.file-name }}" >> $GITHUB_STEP_SUMMARY
 
     - name: Publish archives and packages
       uses: softprops/action-gh-release@v1
