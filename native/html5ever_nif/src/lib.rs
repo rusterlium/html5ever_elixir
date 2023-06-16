@@ -8,13 +8,6 @@ use thiserror::Error;
 mod common;
 mod flat_dom;
 
-mod atoms {
-    rustler::atoms! {
-        doctype,
-        comment,
-    }
-}
-
 #[derive(Error, Debug)]
 pub enum Html5everExError {
     #[error("cannot transform bytes from binary to a valid UTF8 string")]

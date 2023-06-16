@@ -377,7 +377,7 @@ impl Encoder for NodeHandle {
     }
 }
 
-fn insert_error(_err: rustler::error::Error) -> Html5everExError {
+fn to_custom_error(_err: rustler::error::Error) -> Html5everExError {
     Html5everExError::MapEntry
 }
 
@@ -398,7 +398,7 @@ fn encode_node<'a>(
         ),
     ];
 
-    let mut map = Term::map_from_pairs(env, &pairs).map_err(insert_error)?;
+    let mut map = Term::map_from_pairs(env, &pairs).map_err(to_custom_error)?;
 
     match node.data {
         NodeData::Document => map
@@ -406,7 +406,7 @@ fn encode_node<'a>(
                 self::atoms::type_().encode(env),
                 self::atoms::document().encode(env),
             )
-            .map_err(insert_error),
+            .map_err(to_custom_error),
         NodeData::Element {
             ref attrs,
             ref name,
@@ -432,7 +432,7 @@ fn encode_node<'a>(
             ];
 
             for (key, value) in pairs {
-                map = map.map_put(key, value).map_err(insert_error)?;
+                map = map.map_put(key, value).map_err(to_custom_error)?;
             }
 
             Ok(map)
@@ -442,29 +442,29 @@ fn encode_node<'a>(
                 self::atoms::type_().encode(env),
                 self::atoms::text().encode(env),
             )
-            .map_err(insert_error)?
+            .map_err(to_custom_error)?
             .map_put(
                 self::atoms::contents().encode(env),
                 StrTendrilWrapper(contents).encode(env),
             )
-            .map_err(insert_error),
+            .map_err(to_custom_error),
         NodeData::DocType { .. } => map
             .map_put(
                 self::atoms::type_().encode(env),
                 self::atoms::doctype().encode(env),
             )
-            .map_err(insert_error),
+            .map_err(to_custom_error),
         NodeData::Comment { ref contents } => map
             .map_put(
                 self::atoms::type_().encode(env),
                 self::atoms::comment().encode(env),
             )
-            .map_err(insert_error)?
+            .map_err(to_custom_error)?
             .map_put(
                 self::atoms::contents().encode(env),
                 StrTendrilWrapper(contents).encode(env),
             )
-            .map_err(insert_error),
+            .map_err(to_custom_error),
         _ => unimplemented!(),
     }
 }
@@ -504,14 +504,14 @@ pub fn flat_sink_to_flat_term<'a>(
                 node.id.encode(env),
                 encode_node(node, env, &sink.pool, attributes_as_maps)?,
             )
-            .map_err(insert_error)?;
+            .map_err(to_custom_error)?;
     }
 
     ::rustler::types::map::map_new(env)
         .map_put(self::atoms::nodes().encode(env), nodes_map)
-        .map_err(insert_error)?
+        .map_err(to_custom_error)?
         .map_put(self::atoms::root().encode(env), sink.root.encode(env))
-        .map_err(insert_error)
+        .map_err(to_custom_error)
 }
 
 struct RecState {
