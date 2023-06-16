@@ -5,8 +5,19 @@ on:
     branches:
       - main
       - master
+    paths:
+      # Just run on main branch if "native" path changed.
+      - "native/**"
+      # Also run if this file changes.
+      - ".github/workflows/release.yml"
     tags:
-      - '*'
+      # Tags will always run.
+      - "*"
+  pull_request:
+    paths:
+      # In PRs we only run if this file changes.
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
 
 jobs:
   build_release:
@@ -15,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        nif: ["2.16", "2.15", "2.14"]
+        nif: ["2.16", "2.15"]
         job:
           - { target: arm-unknown-linux-gnueabihf , os: ubuntu-20.04 , use-cross: true }
           - { target: aarch64-unknown-linux-gnu   , os: ubuntu-20.04 , use-cross: true }
@@ -64,6 +75,7 @@ jobs:
 
     - name: Write SHA256 to the summary
       run: |
+        echo "SHA256 for this artifact:" >> $GITHUB_STEP_SUMMARY
         echo "${{ steps.build-crate.outputs.file-sha256 }}  ${{ steps.build-crate.outputs.file-name }}" >> $GITHUB_STEP_SUMMARY
 
     - name: Publish archives and packages
