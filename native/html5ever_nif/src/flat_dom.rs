@@ -388,12 +388,12 @@ fn encode_node<'a>(
     attributes_as_maps: bool,
 ) -> Result<Term<'a>, Html5everExError> {
     let pairs: Vec<(Term, Term)> = vec![
-        (self::atoms::id().encode(env), node.id.encode(env)),
+        (atoms::id().encode(env), node.id.encode(env)),
         (
-            self::atoms::parent().encode(env),
+            atoms::parent().encode(env),
             match node.parent {
                 Some(handle) => handle.encode(env),
-                None => self::atoms::nil().encode(env),
+                None => atoms::nil().encode(env),
             },
         ),
     ];
@@ -402,10 +402,7 @@ fn encode_node<'a>(
 
     match node.data {
         NodeData::Document => map
-            .map_put(
-                self::atoms::type_().encode(env),
-                self::atoms::document().encode(env),
-            )
+            .map_put(atoms::type_().encode(env), atoms::document().encode(env))
             .map_err(to_custom_error),
         NodeData::Element {
             ref attrs,
@@ -413,20 +410,14 @@ fn encode_node<'a>(
             ..
         } => {
             let pairs: Vec<(Term, Term)> = vec![
+                (atoms::type_().encode(env), atoms::element().encode(env)),
                 (
-                    self::atoms::type_().encode(env),
-                    self::atoms::element().encode(env),
-                ),
-                (
-                    self::atoms::children().encode(env),
+                    atoms::children().encode(env),
                     node.children.as_slice(pool).encode(env),
                 ),
+                (atoms::name().encode(env), QualNameWrapper(name).encode(env)),
                 (
-                    self::atoms::name().encode(env),
-                    QualNameWrapper(name).encode(env),
-                ),
-                (
-                    self::atoms::attrs().encode(env),
+                    atoms::attrs().encode(env),
                     attributes_to_term(env, attrs, attributes_as_maps),
                 ),
             ];
@@ -438,30 +429,21 @@ fn encode_node<'a>(
             Ok(map)
         }
         NodeData::Text { ref contents } => map
-            .map_put(
-                self::atoms::type_().encode(env),
-                self::atoms::text().encode(env),
-            )
+            .map_put(atoms::type_().encode(env), atoms::text().encode(env))
             .map_err(to_custom_error)?
             .map_put(
-                self::atoms::contents().encode(env),
+                atoms::contents().encode(env),
                 StrTendrilWrapper(contents).encode(env),
             )
             .map_err(to_custom_error),
         NodeData::DocType { .. } => map
-            .map_put(
-                self::atoms::type_().encode(env),
-                self::atoms::doctype().encode(env),
-            )
+            .map_put(atoms::type_().encode(env), atoms::doctype().encode(env))
             .map_err(to_custom_error),
         NodeData::Comment { ref contents } => map
-            .map_put(
-                self::atoms::type_().encode(env),
-                self::atoms::comment().encode(env),
-            )
+            .map_put(atoms::type_().encode(env), atoms::comment().encode(env))
             .map_err(to_custom_error)?
             .map_put(
-                self::atoms::contents().encode(env),
+                atoms::contents().encode(env),
                 StrTendrilWrapper(contents).encode(env),
             )
             .map_err(to_custom_error),
@@ -508,9 +490,9 @@ pub fn flat_sink_to_flat_term<'a>(
     }
 
     ::rustler::types::map::map_new(env)
-        .map_put(self::atoms::nodes().encode(env), nodes_map)
+        .map_put(atoms::nodes().encode(env), nodes_map)
         .map_err(to_custom_error)?
-        .map_put(self::atoms::root().encode(env), sink.root.encode(env))
+        .map_put(atoms::root().encode(env), sink.root.encode(env))
         .map_err(to_custom_error)
 }
 
@@ -576,7 +558,7 @@ pub fn flat_sink_to_rec_term<'a>(
                     assert!(child_stack.is_empty());
 
                     term = (
-                        self::atoms::doctype(),
+                        atoms::doctype(),
                         StrTendrilWrapper(name),
                         StrTendrilWrapper(public_id),
                         StrTendrilWrapper(system_id),
