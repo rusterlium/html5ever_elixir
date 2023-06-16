@@ -9,6 +9,7 @@ use std::borrow::Cow;
 use rustler::{Encoder, Env, Term};
 
 use crate::common::{QualNameWrapper, StrTendrilWrapper};
+use crate::Html5everExError;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct NodeHandle(pub usize);
@@ -376,95 +377,76 @@ impl Encoder for NodeHandle {
     }
 }
 
-fn encode_node<'a>(node: &Node, env: Env<'a>, pool: &[NodeHandle]) -> Term<'a> {
-    let map = ::rustler::types::map::map_new(env)
-        .map_put(self::atoms::id().encode(env), node.id.encode(env))
-        .ok()
-        .unwrap()
-        .map_put(
-            self::atoms::parent().encode(env),
+fn to_custom_error(_err: rustler::error::Error) -> Html5everExError {
+    Html5everExError::MapEntry
+}
+
+fn encode_node<'a>(
+    node: &Node,
+    env: Env<'a>,
+    pool: &[NodeHandle],
+    attributes_as_maps: bool,
+) -> Result<Term<'a>, Html5everExError> {
+    let pairs: Vec<(Term, Term)> = vec![
+        (atoms::id().encode(env), node.id.encode(env)),
+        (
+            atoms::parent().encode(env),
             match node.parent {
                 Some(handle) => handle.encode(env),
-                None => self::atoms::nil().encode(env),
+                None => atoms::nil().encode(env),
             },
-        )
-        .ok()
-        .unwrap();
+        ),
+    ];
+
+    let mut map = Term::map_from_pairs(env, &pairs).map_err(to_custom_error)?;
 
     match node.data {
         NodeData::Document => map
-            .map_put(
-                self::atoms::type_().encode(env),
-                self::atoms::document().encode(env),
-            )
-            .ok()
-            .unwrap(),
+            .map_put(atoms::type_().encode(env), atoms::document().encode(env))
+            .map_err(to_custom_error),
         NodeData::Element {
             ref attrs,
             ref name,
             ..
-        } => map
-            .map_put(
-                self::atoms::type_().encode(env),
-                self::atoms::element().encode(env),
-            )
-            .ok()
-            .unwrap()
-            .map_put(
-                self::atoms::children().encode(env),
-                node.children.as_slice(pool).encode(env),
-            )
-            .ok()
-            .unwrap()
-            .map_put(
-                self::atoms::name().encode(env),
-                QualNameWrapper(name).encode(env),
-            )
-            .ok()
-            .unwrap()
-            .map_put(
-                self::atoms::attrs().encode(env),
-                attrs
-                    .iter()
-                    .map(|attr| (QualNameWrapper(&attr.name), StrTendrilWrapper(&attr.value)))
-                    .collect::<Vec<_>>()
-                    .encode(env),
-            )
-            .ok()
-            .unwrap(),
+        } => {
+            let pairs: Vec<(Term, Term)> = vec![
+                (atoms::type_().encode(env), atoms::element().encode(env)),
+                (
+                    atoms::children().encode(env),
+                    node.children.as_slice(pool).encode(env),
+                ),
+                (atoms::name().encode(env), QualNameWrapper(name).encode(env)),
+                (
+                    atoms::attrs().encode(env),
+                    attributes_to_term(env, attrs, attributes_as_maps),
+                ),
+            ];
+
+            for (key, value) in pairs {
+                map = map.map_put(key, value).map_err(to_custom_error)?;
+            }
+
+            Ok(map)
+        }
         NodeData::Text { ref contents } => map
+            .map_put(atoms::type_().encode(env), atoms::text().encode(env))
+            .map_err(to_custom_error)?
             .map_put(
-                self::atoms::type_().encode(env),
-                self::atoms::text().encode(env),
-            )
-            .ok()
-            .unwrap()
-            .map_put(
-                self::atoms::contents().encode(env),
+                atoms::contents().encode(env),
                 StrTendrilWrapper(contents).encode(env),
             )
-            .ok()
-            .unwrap(),
+            .map_err(to_custom_error),
         NodeData::DocType { .. } => map
-            .map_put(
-                self::atoms::type_().encode(env),
-                self::atoms::doctype().encode(env),
-            )
-            .ok()
-            .unwrap(),
+            .map_put(atoms::type_().encode(env), atoms::doctype().encode(env))
+            .map_err(to_custom_error),
         NodeData::Comment { ref contents } => map
+            .map_put(atoms::type_().encode(env), atoms::comment().encode(env))
+            .map_err(to_custom_error)?
             .map_put(
-                self::atoms::type_().encode(env),
-                self::atoms::comment().encode(env),
-            )
-            .ok()
-            .unwrap()
-            .map_put(
-                self::atoms::contents().encode(env),
+                atoms::contents().encode(env),
                 StrTendrilWrapper(contents).encode(env),
             )
-            .ok()
-            .unwrap(),
+            .map_err(to_custom_error),
         _ => unimplemented!(),
     }
 }
@@ -491,23 +473,27 @@ mod atoms {
     }
 }
 
-pub fn flat_sink_to_flat_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
-    let nodes = sink
-        .nodes
-        .iter()
-        .fold(rustler::types::map::map_new(env), |acc, node| {
-            acc.map_put(node.id.encode(env), encode_node(node, env, &sink.pool))
-                .ok()
-                .unwrap()
-        });
+pub fn flat_sink_to_flat_term<'a>(
+    env: Env<'a>,
+    sink: &FlatSink,
+    attributes_as_maps: bool,
+) -> Result<Term<'a>, Html5everExError> {
+    let mut nodes_map = rustler::types::map::map_new(env);
+
+    for node in sink.nodes.iter() {
+        nodes_map = nodes_map
+            .map_put(
+                node.id.encode(env),
+                encode_node(node, env, &sink.pool, attributes_as_maps)?,
+            )
+            .map_err(to_custom_error)?;
+    }
 
     ::rustler::types::map::map_new(env)
-        .map_put(self::atoms::nodes().encode(env), nodes)
-        .ok()
-        .unwrap()
-        .map_put(self::atoms::root().encode(env), sink.root.encode(env))
-        .ok()
-        .unwrap()
+        .map_put(atoms::nodes().encode(env), nodes_map)
+        .map_err(to_custom_error)?
+        .map_put(atoms::root().encode(env), sink.root.encode(env))
+        .map_err(to_custom_error)
 }
 
 struct RecState {
@@ -516,7 +502,11 @@ struct RecState {
     child_base: usize,
 }
 
-pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
+pub fn flat_sink_to_rec_term<'a>(
+    env: Env<'a>,
+    sink: &FlatSink,
+    attributes_as_maps: bool,
+) -> Result<Term<'a>, Html5everExError> {
     let mut child_stack = vec![];
 
     let mut stack: Vec<RecState> = vec![RecState {
@@ -557,7 +547,7 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
                     }
 
                     assert_eq!(stack.len(), 0);
-                    return term;
+                    return Ok(term);
                 }
                 NodeData::DocType {
                     name,
@@ -568,7 +558,7 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
                     assert!(child_stack.is_empty());
 
                     term = (
-                        self::atoms::doctype(),
+                        atoms::doctype(),
                         StrTendrilWrapper(name),
                         StrTendrilWrapper(public_id),
                         StrTendrilWrapper(system_id),
@@ -578,12 +568,8 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
                 NodeData::Element { attrs, name, .. } => {
                     assert!(!stack.is_empty());
 
-                    let attribute_terms: Vec<Term<'a>> = attrs
-                        .iter()
-                        .map(|a| {
-                            (QualNameWrapper(&a.name), StrTendrilWrapper(&a.value)).encode(env)
-                        })
-                        .collect();
+                    let attribute_terms = attributes_to_term(env, attrs, attributes_as_maps);
+
                     term = (
                         QualNameWrapper(name),
                         attribute_terms,
@@ -603,5 +589,22 @@ pub fn flat_sink_to_rec_term<'a>(env: Env<'a>, sink: &FlatSink) -> Term<'a> {
 
             child_stack.push(term);
         }
+    }
+}
+
+fn attributes_to_term<'a>(
+    env: Env<'a>,
+    attributes: &[Attribute],
+    attributes_as_maps: bool,
+) -> Term<'a> {
+    let pairs: Vec<(QualNameWrapper, StrTendrilWrapper)> = attributes
+        .iter()
+        .map(|a| (QualNameWrapper(&a.name), StrTendrilWrapper(&a.value)))
+        .collect();
+
+    if attributes_as_maps {
+        Term::map_from_pairs(env, &pairs).unwrap()
+    } else {
+        pairs.encode(env)
     }
 }

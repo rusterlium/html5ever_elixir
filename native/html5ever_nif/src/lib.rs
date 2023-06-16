@@ -1,98 +1,62 @@
+use flat_dom::FlatSink;
 use rustler::types::binary::Binary;
-use rustler::{Decoder, Encoder, Env, Error, NifResult, Term};
+use rustler::{Env, Term};
 
-//use html5ever::rcdom::RcDom;
 use tendril::TendrilSink;
+use thiserror::Error;
 
 mod common;
 mod flat_dom;
 
-mod atoms {
-    rustler::atoms! {
-        html5ever_nif_result,
+#[derive(Error, Debug)]
+pub enum Html5everExError {
+    #[error("cannot transform bytes from binary to a valid UTF8 string")]
+    BytesToUtf8(#[from] std::str::Utf8Error),
 
-        ok,
-        error,
-        nif_panic,
+    #[error("cannot insert entry in a map")]
+    MapEntry,
+}
 
-        doctype,
-        comment,
-
-        none,
-        some,
-        all,
+impl rustler::Encoder for Html5everExError {
+    fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
+        format!("{self}").encode(env)
     }
 }
 
-#[derive(PartialEq, Eq)]
-enum ErrorLevel {
-    None,
-    Some,
-    All,
-}
-impl<'a> Decoder<'a> for ErrorLevel {
-    fn decode(term: Term<'a>) -> NifResult<ErrorLevel> {
-        if atoms::none() == term {
-            Ok(ErrorLevel::None)
-        } else if atoms::some() == term {
-            Ok(ErrorLevel::Some)
-        } else if atoms::all() == term {
-            Ok(ErrorLevel::All)
-        } else {
-            Err(Error::BadArg)
-        }
-    }
-}
+#[rustler::nif(schedule = "DirtyCpu")]
+fn parse<'a>(
+    env: Env<'a>,
+    binary: Binary,
+    attributes_as_maps: bool,
+) -> Result<Term<'a>, Html5everExError> {
+    let flat_sink = build_flat_sink(binary.as_slice())?;
 
-#[rustler::nif]
-fn parse_sync<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
-    parse(env, binary)
+    flat_dom::flat_sink_to_rec_term(env, &flat_sink, attributes_as_maps)
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]
-fn parse_dirty<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
-    parse(env, binary)
+fn flat_parse<'a>(
+    env: Env<'a>,
+    binary: Binary,
+    attributes_as_maps: bool,
+) -> Result<Term<'a>, Html5everExError> {
+    let flat_sink = build_flat_sink(binary.as_slice())?;
+
+    flat_dom::flat_sink_to_flat_term(env, &flat_sink, attributes_as_maps)
 }
 
-fn parse<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
+fn build_flat_sink(bin_slice: &[u8]) -> Result<FlatSink, Html5everExError> {
+    let utf8 = std::str::from_utf8(bin_slice)?;
+
     let sink = flat_dom::FlatSink::new();
-
-    let utf = std::str::from_utf8(binary.as_slice()).unwrap();
-
     let parser = html5ever::parse_document(sink, Default::default());
-    let result = parser.one(utf);
 
-    let result_term = flat_dom::flat_sink_to_rec_term(env, &result);
-
-    (atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env)
-}
-
-#[rustler::nif]
-fn flat_parse_sync<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
-    flat_parse(env, binary)
-}
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn flat_parse_dirty<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
-    flat_parse(env, binary)
-}
-
-fn flat_parse<'a>(env: Env<'a>, binary: Binary) -> Term<'a> {
-    let sink = flat_dom::FlatSink::new();
-
-    let utf = std::str::from_utf8(binary.as_slice()).unwrap();
-
-    let parser = html5ever::parse_document(sink, Default::default());
-    let result = parser.one(utf);
-
-    let result_term = flat_dom::flat_sink_to_flat_term(env, &result);
-
-    (atoms::html5ever_nif_result(), atoms::ok(), result_term).encode(env)
+    Ok(parser.one(utf8))
 }
 
 rustler::init!(
     "Elixir.Html5ever.Native",
-    [parse_sync, parse_dirty, flat_parse_sync, flat_parse_dirty],
+    [parse, flat_parse],
     load = on_load
 );
 

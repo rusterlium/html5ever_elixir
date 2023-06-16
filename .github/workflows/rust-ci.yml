@@ -1,0 +1,38 @@
+name: Rust CI
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "native/**"
+  pull_request:
+    paths:
+      - "native/**"
+  workflow_dispatch:
+
+jobs:
+  lint-rust:
+    name: Lint Rust
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        manifest:
+          - native/html5ever_nif/Cargo.toml
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            native/html5ever_nif
+
+      - name: run rustfmt
+        run: cargo fmt --manifest-path=${{ matrix.manifest }} --all -- --check
+
+      - name: run clippy
+        run: cargo clippy --manifest-path=${{ matrix.manifest }} -- -Dwarnings

@@ -19,10 +19,8 @@ defmodule Html5ever.Native do
       System.get_env("HTML5EVER_BUILD") in ["1", "true"] or env_config[:build_from_source],
     version: version
 
-  def parse_sync(_binary), do: err()
-  def parse_dirty(_binary), do: err()
-  def flat_parse_sync(_binary), do: err()
-  def flat_parse_dirty(_binary), do: err()
+  def parse(_binary, _attrs_as_maps), do: err()
+  def flat_parse(_binary, _attrs_as_maps), do: err()
 
   defp err, do: :erlang.nif_error(:nif_not_loaded)
 end
