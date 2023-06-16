@@ -114,7 +114,7 @@ defmodule Html5ever do
        }}
 
   """
-  def flat_parse(html) do
+  def flat_parse(html) when is_binary(html) do
     Html5ever.Native.flat_parse(html, false)
   end
 
