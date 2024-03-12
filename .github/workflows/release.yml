@@ -42,7 +42,7 @@ jobs:
 
     steps:
     - name: Checkout source code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Extract project version
       shell: bash
@@ -58,7 +58,7 @@ jobs:
 
     - name: Build the project
       id: build-crate
-      uses: philss/rustler-precompiled-action@v1.0.1
+      uses: philss/rustler-precompiled-action@v1.1.3
       with:
         project-name: html5ever_nif
         project-version: ${{ env.PROJECT_VERSION }}
