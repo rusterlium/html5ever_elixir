@@ -23,7 +23,7 @@ impl<T> PoolOrVec<T>
 where
     T: Clone,
 {
-    pub fn new(pool: &Vec<T>) -> Self {
+    pub fn new(pool: &[T]) -> Self {
         PoolOrVec::Pool {
             head: pool.len(),
             len: 0,
@@ -116,7 +116,7 @@ pub struct Node {
     data: NodeData,
 }
 impl Node {
-    fn new(id: usize, data: NodeData, pool: &Vec<NodeHandle>) -> Self {
+    fn new(id: usize, data: NodeData, pool: &[NodeHandle]) -> Self {
         Node {
             id: NodeHandle(id),
             parent: None,
