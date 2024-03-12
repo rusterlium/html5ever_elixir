@@ -116,7 +116,7 @@ pub struct Node {
     data: NodeData,
 }
 impl Node {
-    fn new(id: usize, data: NodeData, pool: &Vec<NodeHandle>) -> Self {
+    fn new(id: usize, data: NodeData, pool: &[NodeHandle]) -> Self {
         Node {
             id: NodeHandle(id),
             parent: None,
