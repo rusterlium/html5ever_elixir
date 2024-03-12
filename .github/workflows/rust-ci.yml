@@ -26,10 +26,10 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      # - uses: Swatinem/rust-cache@v2
-      #   with:
-      #     workspaces: |
-      #       native/html5ever_nif
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            native/html5ever_nif
 
       - name: run rustfmt
         run: cargo fmt --manifest-path=${{ matrix.manifest }} --all -- --check
