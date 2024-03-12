@@ -23,7 +23,7 @@ impl<T> PoolOrVec<T>
 where
     T: Clone,
 {
-    pub fn new(pool: &Vec<T>) -> Self {
+    pub fn new(pool: &[T]) -> Self {
         PoolOrVec::Pool {
             head: pool.len(),
             len: 0,
