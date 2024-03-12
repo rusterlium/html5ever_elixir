@@ -10,7 +10,8 @@ path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-rustler = "0.29.1"
+# See the Precompilation guide for details about the features: https://github.com/philss/rustler_precompiled/blob/main/PRECOMPILATION_GUIDE.md
+rustler = { version = "0.31", default-features = false, features = ["derive", "nif_version_2_15"] }
 
 html5ever = "0.26"
 markup5ever = "0.11"
