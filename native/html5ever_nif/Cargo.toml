@@ -14,7 +14,7 @@ crate-type = ["cdylib"]
 rustler = { version = "0.32", default-features = false, features = ["derive", "nif_version_2_15"] }
 
 html5ever = "0.26"
-markup5ever = "0.11"
+markup5ever = "0.12"
 
 tendril = "0.4"
 lazy_static = "1.4"
