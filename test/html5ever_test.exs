@@ -8,9 +8,17 @@ defmodule Html5everTest do
   end
 
   test "parse basic html" do
-    html = "<html><head></head><body></body></html>"
+    html = "<html><head></head><body><h1>Hello</h1><!-- my comment --></body></html>"
 
-    assert Html5ever.parse(html) == {:ok, [{"html", [], [{"head", [], []}, {"body", [], []}]}]}
+    assert Html5ever.parse(html) ==
+             {:ok,
+              [
+                {"html", [],
+                 [
+                   {"head", [], []},
+                   {"body", [], [{"h1", [], ["Hello"]}, {:comment, " my comment "}]}
+                 ]}
+              ]}
   end
 
   test "does not parse with not valid UTF8 binary" do
