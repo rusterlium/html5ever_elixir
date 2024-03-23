@@ -583,7 +583,9 @@ pub fn flat_sink_to_rec_term<'a>(
                 NodeData::Text { contents } => {
                     term = StrTendrilWrapper(contents).encode(env);
                 }
-                NodeData::Comment { .. } => continue,
+                NodeData::Comment { contents } => {
+                    term = (atoms::comment(), StrTendrilWrapper(contents)).encode(env);
+                }
                 _ => unimplemented!(""),
             }
 
