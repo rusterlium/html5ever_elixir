@@ -214,8 +214,23 @@ impl TreeSink for FlatSink {
     fn get_document(&mut self) -> Self::Handle {
         NodeHandle(0)
     }
-    fn get_template_contents(&mut self, _target: &Self::Handle) -> Self::Handle {
-        panic!("Templates not supported");
+    fn get_template_contents(&mut self, target: &Self::Handle) -> Self::Handle {
+        // Inspired in https://github.com/servo/html5ever/blob/1a62a39879a1def200dcb87b900265993e6c1c83/rcdom/lib.rs#L235
+        // It is not getting the templates contents. But is printing the empty tag.
+        // TODO: print the contents as text.
+        let node = self.node(*target);
+        if let NodeData::Element {
+            ref template_contents,
+            ..
+        } = node.data
+        {
+            template_contents
+                .as_ref()
+                .expect("not a template element!")
+                .clone()
+        } else {
+            panic!("not a template element!")
+        }
     }
 
     fn same_node(&self, x: &Self::Handle, y: &Self::Handle) -> bool {

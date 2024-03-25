@@ -279,4 +279,33 @@ defmodule Html5everTest do
                ]}
             ]} = parsed
   end
+
+  test "parse html with a template tag ignores template content" do
+    html = """
+    <!doctype html>
+    <html>
+    <head><title>With template</title></head>
+    <body>
+    <h1>Document</h1>
+    <template>
+      <h2>Flower</h2>
+      <img src="img_white_flower.jpg" width="214" height="204">
+    </template>
+    </body>
+    </html>
+    """
+
+    assert Html5ever.parse(html) ==
+             {:ok,
+              [
+                {:doctype, "html", "", ""},
+                {"html", [],
+                 [
+                   {"head", [], [{"title", [], ["With template"]}]},
+                   "\n",
+                   {"body", [],
+                    ["\n", {"h1", [], ["Document"]}, "\n", {"template", [], []}, "\n", "\n", "\n"]}
+                 ]}
+              ]}
+  end
 end
