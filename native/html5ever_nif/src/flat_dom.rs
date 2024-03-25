@@ -224,10 +224,7 @@ impl TreeSink for FlatSink {
             ..
         } = node.data
         {
-            template_contents
-                .as_ref()
-                .expect("not a template element!")
-                .clone()
+            *template_contents.as_ref().expect("not a template element!")
         } else {
             panic!("not a template element!")
         }
