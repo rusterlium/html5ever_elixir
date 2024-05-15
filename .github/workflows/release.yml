@@ -1,5 +1,9 @@
 name: Build precompiled NIFs
 
+permissions:
+  id-token: write
+  attestations: write
+
 on:
   push:
     branches:
@@ -65,6 +69,11 @@ jobs:
         nif-version: ${{ matrix.nif }}
         use-cross: ${{ matrix.job.use-cross }}
         project-dir: "native/html5ever_nif"
+
+    - name: Artifact attestation
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-path: ${{ steps.build-crate.outputs.file-path }}
 
     - name: Artifact upload
       uses: actions/upload-artifact@v4
