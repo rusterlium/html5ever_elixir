@@ -57,7 +57,7 @@ jobs:
 
     - name: Build the project
       id: build-crate
-      uses: philss/rustler-precompiled-action@v1.1.3
+      uses: philss/rustler-precompiled-action@v1.1.4
       with:
         project-name: html5ever_nif
         project-version: ${{ env.PROJECT_VERSION }}
@@ -78,7 +78,7 @@ jobs:
         echo "${{ steps.build-crate.outputs.file-sha256 }}  ${{ steps.build-crate.outputs.file-name }}" >> $GITHUB_STEP_SUMMARY
 
     - name: Publish archives and packages
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: |
           ${{ steps.build-crate.outputs.file-path }}
