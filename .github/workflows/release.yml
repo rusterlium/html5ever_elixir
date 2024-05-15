@@ -3,6 +3,7 @@ name: Build precompiled NIFs
 permissions:
   id-token: write
   attestations: write
+  contents: write
 
 on:
   push:
