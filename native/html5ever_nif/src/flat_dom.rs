@@ -526,6 +526,8 @@ pub fn flat_sink_to_rec_term<'a>(
         child_base: 0,
         child_n: 0,
     }];
+    let mut comments_bf_doctype = 0u16;
+    let mut read_doctype = false;
 
     loop {
         let mut top = stack.pop().unwrap();
@@ -567,7 +569,9 @@ pub fn flat_sink_to_rec_term<'a>(
                     system_id,
                 } => {
                     assert!(!stack.is_empty());
-                    assert!(child_stack.is_empty());
+                    assert!(child_stack.is_empty() || comments_bf_doctype > 0);
+
+                    read_doctype = true;
 
                     term = (
                         atoms::doctype(),
@@ -596,6 +600,10 @@ pub fn flat_sink_to_rec_term<'a>(
                     term = StrTendrilWrapper(contents).encode(env);
                 }
                 NodeData::Comment { contents } => {
+                    if !read_doctype {
+                        comments_bf_doctype += 1
+                    };
+
                     term = (atoms::comment(), StrTendrilWrapper(contents)).encode(env);
                 }
                 _ => unimplemented!(""),

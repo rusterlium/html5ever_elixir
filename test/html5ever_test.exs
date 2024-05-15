@@ -308,4 +308,46 @@ defmodule Html5everTest do
                  ]}
               ]}
   end
+
+  test "parse html starting with a XML tag" do
+    html = """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!-- also a comment is allowed -->
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+    <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+      <head><title>Hello</title></head>
+      <body>
+        <a id="anchor" href="https://example.com">link</a>
+      </body>
+    </html>
+    """
+
+    assert Html5ever.parse(html) ==
+             {:ok,
+              [
+                {:comment, "?xml version=\"1.0\" encoding=\"UTF-8\"?"},
+                {:comment, " also a comment is allowed "},
+                {:doctype, "html", "-//W3C//DTD XHTML 1.0 Strict//EN",
+                 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"},
+                {
+                  "html",
+                  [{"xmlns", "http://www.w3.org/1999/xhtml"}, {"xml:lang", "en"}, {"lang", "en"}],
+                  [
+                    {"head", [], [{"title", [], ["Hello"]}]},
+                    "\n",
+                    "  ",
+                    {"body", [],
+                     [
+                       "\n",
+                       "    ",
+                       {"a", [{"id", "anchor"}, {"href", "https://example.com"}], ["link"]},
+                       "\n",
+                       "  ",
+                       "\n",
+                       "\n"
+                     ]}
+                  ]
+                }
+              ]}
+  end
 end
