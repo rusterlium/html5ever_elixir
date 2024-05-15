@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] - 2024-05-15
+
+### Fixed
+
+- Fix parsing of HTML documents that may start with a comment or an XML doc tag.
+
 ## [0.16.0] - 2024-03-25
 
 ### Fixed
@@ -171,7 +177,8 @@ is not needed for most of people using this project.
 
 - Add support for OTP 24. This was achieved by updating Rustler to v0.22.
 
-[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.3...v0.15.0
 [0.14.3]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.2...v0.14.3

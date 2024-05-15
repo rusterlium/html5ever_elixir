@@ -1,7 +1,7 @@
 defmodule Html5ever.Mixfile do
   use Mix.Project
 
-  @version "0.16.0-dev"
+  @version "0.16.1"
   @repo_url "https://github.com/rusterlium/html5ever_elixir"
 
   def project do
