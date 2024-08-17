@@ -54,12 +54,4 @@ fn build_flat_sink(bin_slice: &[u8]) -> Result<FlatSink, Html5everExError> {
     Ok(parser.one(utf8))
 }
 
-rustler::init!(
-    "Elixir.Html5ever.Native",
-    [parse, flat_parse],
-    load = on_load
-);
-
-fn on_load<'a>(_env: Env<'a>, _load_info: Term<'a>) -> bool {
-    true
-}
+rustler::init!("Elixir.Html5ever.Native");
