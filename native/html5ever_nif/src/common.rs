@@ -10,13 +10,13 @@ use tendril::StrTendril;
 pub struct QualNameWrapper<'a>(pub &'a QualName);
 pub struct StrTendrilWrapper<'a>(pub &'a StrTendril);
 
-impl<'b> Encoder for QualNameWrapper<'b> {
+impl Encoder for QualNameWrapper<'_> {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         let data: &str = &self.0.local;
         data.encode(env)
     }
 }
-impl<'b> Encoder for StrTendrilWrapper<'b> {
+impl Encoder for StrTendrilWrapper<'_> {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         let data: &str = self.0;
         data.encode(env)
