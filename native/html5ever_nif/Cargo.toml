@@ -19,4 +19,4 @@ markup5ever = "0.12"
 tendril = "0.4"
 lazy_static = "1.5"
 
-thiserror = "1"
+thiserror = "2"
