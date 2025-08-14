@@ -233,7 +233,7 @@ impl TreeSink for FlatSink {
     fn same_node(&self, x: &Self::Handle, y: &Self::Handle) -> bool {
         x == y
     }
-    fn elem_name(&self, target: &Self::Handle) -> ExpandedName {
+    fn elem_name(&self, target: &Self::Handle) -> ExpandedName<'_> {
         let node = self.node(*target);
         match node.data {
             NodeData::Element { ref name, .. } => name.expanded(),
