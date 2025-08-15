@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2025-08-15
+
+### Changed
+
+- Require at least Rustler v0.36.0
+
+- Require at least RustlerPrecompiled v0.8.
+  This is dropping support for versions 0.6 and 0.7 of that dependency.
+
+- Use newer versions of OS images to build the precompiled artifacts.
+  Some of the images we were using are deprecated.
+  Updated `ubuntu-20.04` to `ubuntu-22.04`, `macos-11` to `macos-13` and
+  `windows-2019` to `windows-2022`. Those changes may break systems running
+  in older versions of the related operational system.
+
+### Removed
+
+- Remove support for Elixir 1.13.
+
 ## [0.16.1] - 2024-05-15
 
 ### Fixed
@@ -177,7 +196,8 @@ is not needed for most of people using this project.
 
 - Add support for OTP 24. This was achieved by updating Rustler to v0.22.
 
-[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.16.1...HEAD
+[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.14.3...v0.15.0

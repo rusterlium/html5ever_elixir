@@ -1,7 +1,7 @@
 defmodule Html5ever.Mixfile do
   use Mix.Project
 
-  @version "0.16.1-dev"
+  @version "0.17.0"
   @repo_url "https://github.com/rusterlium/html5ever_elixir"
 
   def project do
@@ -24,8 +24,8 @@ defmodule Html5ever.Mixfile do
 
   defp deps do
     [
-      {:rustler_precompiled, "~> 0.8.0"},
-      {:rustler, "~> 0.36.0", optional: true},
+      {:rustler_precompiled, "~> 0.8"},
+      {:rustler, "~> 0.36", optional: true},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
