@@ -12,7 +12,7 @@ The package can be installed by adding `html5ever` to your list of dependencies 
 
 ```elixir
 def deps do
-  [{:html5ever, "~> 0.16.0"}]
+  [{:html5ever, "~> 0.17.0"}]
 end
 ```
 
@@ -39,7 +39,7 @@ the compilation:
 ```elixir
 def deps do
   [
-    {:html5ever, "~> 0.16.0"},
+    {:html5ever, "~> 0.17.0"},
     {:rustler, ">= 0.0.0", optional: true}
   ]
 end
