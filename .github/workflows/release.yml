@@ -1,9 +1,12 @@
 name: Build precompiled NIFs
 
 permissions:
+  # For writing a new release after a tag push.
+  contents: write
+  # For the actions/attest GH Action.
   id-token: write
   attestations: write
-  contents: write
+  artifact-metadata: write
 
 on:
   push:
@@ -36,9 +39,9 @@ jobs:
           - { target: arm-unknown-linux-gnueabihf , os: ubuntu-22.04 , use-cross: true }
           - { target: aarch64-unknown-linux-gnu   , os: ubuntu-22.04 , use-cross: true }
           - { target: aarch64-unknown-linux-musl  , os: ubuntu-22.04 , use-cross: true }
-          - { target: aarch64-apple-darwin        , os: macos-13      }
+          - { target: aarch64-apple-darwin        , os: macos-15      }
           - { target: riscv64gc-unknown-linux-gnu , os: ubuntu-22.04 , use-cross: true }
-          - { target: x86_64-apple-darwin         , os: macos-13      }
+          - { target: x86_64-apple-darwin         , os: macos-15-intel }
           - { target: x86_64-unknown-linux-gnu    , os: ubuntu-22.04  }
           - { target: x86_64-unknown-linux-musl   , os: ubuntu-22.04 , use-cross: true }
           - { target: x86_64-pc-windows-gnu       , os: windows-2022  }
@@ -46,7 +49,7 @@ jobs:
 
     steps:
     - name: Checkout source code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Extract project version
       shell: bash
@@ -62,7 +65,7 @@ jobs:
 
     - name: Build the project
       id: build-crate
-      uses: philss/rustler-precompiled-action@v1.1.4
+      uses: philss/rustler-precompiled-action@v1.1.5
       with:
         project-name: html5ever_nif
         project-version: ${{ env.PROJECT_VERSION }}
@@ -72,12 +75,12 @@ jobs:
         project-dir: "native/html5ever_nif"
 
     - name: Artifact attestation
-      uses: actions/attest-build-provenance@v1
+      uses: actions/attest@v4
       with:
         subject-path: ${{ steps.build-crate.outputs.file-path }}
 
     - name: Artifact upload
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.build-crate.outputs.file-name }}
         path: ${{ steps.build-crate.outputs.file-path }}
