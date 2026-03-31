@@ -13,23 +13,18 @@ on:
 jobs:
   lint-rust:
     name: Lint Rust
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         manifest:
           - native/html5ever_nif/Cargo.toml
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            native/html5ever_nif
 
       - name: run rustfmt
         run: cargo fmt --manifest-path=${{ matrix.manifest }} --all -- --check
