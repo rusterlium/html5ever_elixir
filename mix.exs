@@ -8,7 +8,7 @@ defmodule Html5ever.Mixfile do
     [
       app: :html5ever,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.15",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
