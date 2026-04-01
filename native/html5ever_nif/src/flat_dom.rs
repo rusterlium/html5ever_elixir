@@ -8,8 +8,8 @@ use std::borrow::Cow;
 
 use rustler::{Encoder, Env, Term};
 
-use crate::common::{QualNameWrapper, StrTendrilWrapper};
 use crate::Html5everExError;
+use crate::common::{QualNameWrapper, StrTendrilWrapper};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct NodeHandle(pub usize);
