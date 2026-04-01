@@ -49,7 +49,6 @@ name = "html5ever_nif"
 version = "0.1.0"
 dependencies = [
  "html5ever",
- "lazy_static",
  "markup5ever",
  "rustler",
  "tendril",
@@ -64,12 +63,6 @@ checksum = "a4f0c30c76f2f4ccee3fe55a2435f691ca00c0e4bd87abe4f4a851b1d4dac39b"
 dependencies = [
  "rustversion",
 ]
-
-[[package]]
-name = "lazy_static"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libc"
