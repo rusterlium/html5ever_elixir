@@ -13,7 +13,7 @@ crate-type = ["cdylib"]
 # See the Precompilation guide for details about the features: https://github.com/philss/rustler_precompiled/blob/main/PRECOMPILATION_GUIDE.md
 rustler = "0.37"
 
-html5ever = "0.27"
+html5ever = "0.39"
 markup5ever = "0.12"
 
 tendril = "0.4"
