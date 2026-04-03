@@ -389,11 +389,11 @@ pub(crate) fn nodes_to_term<'arena, 'env>(
         )
             .encode(env),
         NodeData::Text { contents } => {
-            let text = contents.borrow().clone();
+            let text = contents.borrow();
             StrTendrilWrapper(&text).encode(env)
         }
         NodeData::Comment { contents } => {
-            (atoms::comment(), StrTendrilWrapper(&contents.clone())).encode(env)
+            (atoms::comment(), StrTendrilWrapper(contents)).encode(env)
         }
         NodeData::Element { name, attrs, .. } => {
             let mut terms: Vec<Term> = Vec::new();
@@ -414,8 +414,8 @@ pub(crate) fn nodes_to_term<'arena, 'env>(
         }
         NodeData::ProcessingInstruction { target, contents } => (
             atoms::process_instruction(),
-            StrTendrilWrapper(&target.clone()),
-            StrTendrilWrapper(&contents.clone()),
+            StrTendrilWrapper(target),
+            StrTendrilWrapper(contents),
         )
             .encode(env),
     }
@@ -521,7 +521,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
                 nodes_map
             }
             NodeData::Text { contents } => {
-                let text = contents.borrow().clone();
+                let text = contents.borrow();
 
                 let pairs: Vec<(Term, Term)> = vec![
                     (atom_id, node_id_encoded),
@@ -543,10 +543,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
                     (atom_type, atoms::comment().encode(env)),
-                    (
-                        atom_contents,
-                        StrTendrilWrapper(&contents.clone()).encode(env),
-                    ),
+                    (atom_contents, StrTendrilWrapper(contents).encode(env)),
                 ];
                 let comment_map =
                     Term::map_from_pairs(env, &pairs).map_err(rustler_error_to_map_entry_error)?;
