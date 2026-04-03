@@ -29,7 +29,11 @@ fn parse<'a>(
 ) -> Result<Term<'a>, Html5everExError> {
     let utf8 = std::str::from_utf8(binary.as_slice())?;
 
-    let arena = typed_arena::Arena::new();
+    // Average node size based on web archive is 600:
+    // https://discuss.httparchive.org/t/are-there-any-stats-about-dom-sizes-in-modern-pages/1619
+    // So using a bit more than that.
+    let arena = typed_arena::Arena::with_capacity(800);
+
     let first_node = arena_sink::html5ever_parse_slice_into_arena(utf8.as_bytes(), &arena);
     let term = arena_sink::nodes_to_term(env, first_node, attributes_as_maps);
 
@@ -44,7 +48,11 @@ fn flat_parse<'a>(
 ) -> Result<Term<'a>, Html5everExError> {
     let utf8 = std::str::from_utf8(binary.as_slice())?;
 
-    let arena = typed_arena::Arena::new();
+    // Average node size based on web archive is 600:
+    // https://discuss.httparchive.org/t/are-there-any-stats-about-dom-sizes-in-modern-pages/1619
+    // So using a bit more than that.
+    let arena = typed_arena::Arena::with_capacity(800);
+
     let first_node = arena_sink::html5ever_parse_slice_into_arena(utf8.as_bytes(), &arena);
     arena_sink::nodes_to_flat_term(env, first_node, attributes_as_maps)
 }
