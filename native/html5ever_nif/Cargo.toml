@@ -10,12 +10,13 @@ path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-# See the Precompilation guide for details about the features: https://github.com/philss/rustler_precompiled/blob/main/PRECOMPILATION_GUIDE.md
 rustler = "0.37"
 
-html5ever = "0.27"
-markup5ever = "0.12"
+html5ever = "0.39"
+markup5ever = "0.39"
 
-tendril = "0.4"
+tendril = "0.5"
 
 thiserror = "2"
+
+typed-arena = "2"

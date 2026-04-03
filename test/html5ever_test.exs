@@ -37,7 +37,7 @@ defmodule Html5everTest do
       {:ok,
        %{
          nodes: %{
-           0 => %{id: 0, parent: nil, type: :document},
+           0 => %{children: [1], id: 0, parent: nil, type: :document},
            1 => %{children: [2, 3], id: 1, parent: 0, type: :element, attrs: [], name: "html"},
            2 => %{children: [], id: 2, parent: 1, type: :element, attrs: [], name: "head"},
            3 => %{
@@ -72,7 +72,7 @@ defmodule Html5everTest do
       {:ok,
        %{
          nodes: %{
-           0 => %{id: 0, parent: nil, type: :document},
+           0 => %{children: [1], id: 0, parent: nil, type: :document},
            1 => %{children: [2, 3], id: 1, parent: 0, type: :element, attrs: %{}, name: "html"},
            2 => %{children: [], id: 2, parent: 1, type: :element, attrs: %{}, name: "head"},
            3 => %{
@@ -151,50 +151,35 @@ defmodule Html5everTest do
               {:doctype, "html", "", ""},
               {"html", [],
                [
-                 {"head", [], ["\n", "    ", {"title", [], ["Test"]}, "\n", "  "]},
-                 "\n",
-                 "  ",
+                 {"head", [], ["\n    ", {"title", [], ["Test"]}, "\n  "]},
+                 "\n  ",
                  {"body", [],
                   [
-                    "\n",
-                    "    ",
+                    "\n    ",
                     {"div", [{"class", "content"}],
                      [
-                       "\n",
-                       "      ",
+                       "\n      ",
                        {"span", [],
                         [
-                          "\n",
-                          "        ",
+                          "\n        ",
                           {"div", [],
                            [
-                             "\n",
-                             "          ",
+                             "\n          ",
                              {"span", [],
                               [
-                                "\n",
-                                "            ",
-                                {"small", [],
-                                 ["\n", "            very deep content", "\n", "            "]},
-                                "\n",
-                                "          "
+                                "\n            ",
+                                {"small", [], ["\n            very deep content\n            "]},
+                                "\n          "
                               ]},
-                             "\n",
-                             "        "
+                             "\n        "
                            ]},
-                          "\n",
-                          "        ",
+                          "\n        ",
                           {"img", [{"src", "file.jpg"}], []},
-                          "\n",
-                          "      "
+                          "\n      "
                         ]},
-                       "\n",
-                       "    "
+                       "\n    "
                      ]},
-                    "\n",
-                    "  ",
-                    "\n",
-                    "\n"
+                    "\n  \n\n"
                   ]}
                ]}
             ]} = parsed
@@ -226,58 +211,47 @@ defmodule Html5everTest do
 
     parsed = Html5ever.parse_with_attributes_as_maps(html)
 
-    assert {:ok,
-            [
-              {:doctype, "html", "", ""},
-              {"html", %{},
+    assert {:ok, document} = parsed
+
+    assert document == [
+             {:doctype, "html", "", ""},
+             {
+               "html",
+               %{},
                [
-                 {"head", %{}, ["\n", "    ", {"title", %{}, ["Test"]}, "\n", "  "]},
-                 "\n",
-                 "  ",
+                 {"head", %{}, ["\n    ", {"title", %{}, ["Test"]}, "\n  "]},
+                 "\n  ",
                  {"body", %{},
                   [
-                    "\n",
-                    "    ",
+                    "\n    ",
                     {"div", %{"class" => "content"},
                      [
-                       "\n",
-                       "      ",
+                       "\n      ",
                        {"span", %{},
                         [
-                          "\n",
-                          "        ",
+                          "\n        ",
                           {"div", %{},
                            [
-                             "\n",
-                             "          ",
+                             "\n          ",
                              {"span", %{},
                               [
-                                "\n",
-                                "            ",
-                                {"small", %{},
-                                 ["\n", "            very deep content", "\n", "            "]},
-                                "\n",
-                                "          "
+                                "\n            ",
+                                {"small", %{}, ["\n            very deep content\n            "]},
+                                "\n          "
                               ]},
-                             "\n",
-                             "        "
+                             "\n        "
                            ]},
-                          "\n",
-                          "        ",
+                          "\n        ",
                           {"img", %{"src" => "file.jpg"}, []},
-                          "\n",
-                          "      "
+                          "\n      "
                         ]},
-                       "\n",
-                       "    "
+                       "\n    "
                      ]},
-                    "\n",
-                    "  ",
-                    "\n",
-                    "\n"
+                    "\n  \n\n"
                   ]}
-               ]}
-            ]} = parsed
+               ]
+             }
+           ]
   end
 
   test "parse html with a template tag ignores template content" do
@@ -304,7 +278,7 @@ defmodule Html5everTest do
                    {"head", [], [{"title", [], ["With template"]}]},
                    "\n",
                    {"body", [],
-                    ["\n", {"h1", [], ["Document"]}, "\n", {"template", [], []}, "\n", "\n", "\n"]}
+                    ["\n", {"h1", [], ["Document"]}, "\n", {"template", [], []}, "\n\n\n"]}
                  ]}
               ]}
   end
@@ -334,17 +308,12 @@ defmodule Html5everTest do
                   [{"xmlns", "http://www.w3.org/1999/xhtml"}, {"xml:lang", "en"}, {"lang", "en"}],
                   [
                     {"head", [], [{"title", [], ["Hello"]}]},
-                    "\n",
-                    "  ",
+                    "\n  ",
                     {"body", [],
                      [
-                       "\n",
-                       "    ",
+                       "\n    ",
                        {"a", [{"id", "anchor"}, {"href", "https://example.com"}], ["link"]},
-                       "\n",
-                       "  ",
-                       "\n",
-                       "\n"
+                       "\n  \n\n"
                      ]}
                   ]
                 }

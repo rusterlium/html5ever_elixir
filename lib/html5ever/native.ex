@@ -8,12 +8,14 @@ defmodule Html5ever.Native do
 
   env_config = Application.compile_env(:html5ever, Html5ever, [])
 
+  mode = if Mix.env() in [:dev, :test], do: :debug, else: :release
+
   # This module will be replaced by the NIF module after
   # loaded. It throws an error in case the NIF can't be loaded.
   use RustlerPrecompiled,
     otp_app: :html5ever,
     crate: "html5ever_nif",
-    mode: :release,
+    mode: mode,
     base_url: "#{github_url}/releases/download/v#{version}",
     force_build:
       System.get_env("HTML5EVER_BUILD") in ["1", "true"] or env_config[:build_from_source],
