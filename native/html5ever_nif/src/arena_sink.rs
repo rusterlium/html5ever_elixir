@@ -33,10 +33,11 @@ use crate::common::{QualNameWrapper, StrTendrilWrapper, atoms};
 
 /// By using our ArenaSink type, the arena is filled with parsed HTML.
 pub(crate) fn html5ever_parse_slice_into_arena<'a>(bytes: &[u8], arena: Arena<'a>) -> Ref<'a> {
+    let root_id: usize = 0;
     let sink = ArenaSink {
         arena,
-        id: Cell::new(0),
-        document: arena.alloc(Node::new(NodeData::Document, 0)),
+        id: Cell::new(root_id),
+        document: arena.alloc(Node::new(NodeData::Document, root_id)),
         quirks_mode: Cell::new(QuirksMode::NoQuirks),
     };
 
@@ -586,11 +587,11 @@ pub(crate) fn nodes_to_flat_term<'env>(
                     (atom_name, StrTendrilWrapper(target).encode(env)),
                     (atom_contents, StrTendrilWrapper(contents).encode(env)),
                 ];
-                let doctype_map =
+                let process_instruction_map =
                     Term::map_from_pairs(env, &pairs).map_err(rustler_error_to_map_entry_error)?;
 
                 nodes_map = nodes_map
-                    .map_put(node_id_encoded, doctype_map)
+                    .map_put(node_id_encoded, process_instruction_map)
                     .map_err(rustler_error_to_map_entry_error)?;
 
                 nodes_map
