@@ -22,3 +22,26 @@ impl Encoder for StrTendrilWrapper<'_> {
         data.encode(env)
     }
 }
+
+pub(crate) mod atoms {
+    rustler::atoms! {
+        nil,
+
+        type_ = "type",
+        document,
+        element,
+        text,
+        doctype,
+        comment,
+        process_instruction = "pi",
+
+        name,
+        nodes,
+        root,
+        id,
+        parent,
+        children,
+        contents,
+        attrs,
+    }
+}

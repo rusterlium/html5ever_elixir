@@ -74,8 +74,8 @@ defmodule Html5ever do
       {:ok,
        %{
          nodes: %{
-           0 => %{id: 0, parent: nil, type: :document},
-           1 => %{id: 1, parent: 0, type: :doctype},
+           0 => %{id: 0, parent: nil, type: :document, children: [1, 2]},
+           1 => %{id: 1, parent: 0, type: :doctype, name: "html"},
            2 => %{
              attrs: [],
              children: [3, 4],
