@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.18.0] - 2026-04-15
+## [0.18.0] - 2026-04-16
 
 ### Changed
 
@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   See the example in https://github.com/servo/html5ever/blob/ce64836c685025a5fef0860fa2e9c80b2683e8d0/html5ever/examples/arena.rs
   This change only affects the API by including the "Process Instruction" nodes (`:pi`).
   In terms of performance, it does not change much (from Floki's performance tests).
+
+- Update `html5ever` dependency. This should affect the parsed HTML documents,
+  as it is a huge bump in the version - from 0.27 to 0.39.
 
 ### Removed
 
