@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-04-16
+
+### Changed
+
+- Include `:children` IDs to the "document" node for the flat parse result.
+
+- Collapse consecutive text nodes. This is going to produce less nodes.
+
+- Refactor the implementation of the tree sink to use an arena for faster allocations,
+  as one of the html5ever's examples demonstrates.
+
+  See the example in https://github.com/servo/html5ever/blob/ce64836c685025a5fef0860fa2e9c80b2683e8d0/html5ever/examples/arena.rs
+  This change only affects the API by including the "Process Instruction" nodes (`:pi`).
+  In terms of performance, it does not change much (from Floki's performance tests).
+
+- Update `html5ever` dependency. This should affect the parsed HTML documents,
+  as it is a huge bump in the version - from 0.27 to 0.39.
+
+### Removed
+
+- Remove support for Elixir v1.14.
+
 ## [0.17.0] - 2025-08-15
 
 ### Changed
@@ -196,7 +218,8 @@ is not needed for most of people using this project.
 
 - Add support for OTP 24. This was achieved by updating Rustler to v0.22.
 
-[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.15.0...v0.16.0
