@@ -1,6 +1,5 @@
 defmodule Html5ever.Native do
   @moduledoc false
-  require Logger
 
   mix_config = Mix.Project.config()
   version = mix_config[:version]
