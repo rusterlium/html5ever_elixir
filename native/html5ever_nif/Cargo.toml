@@ -10,7 +10,7 @@ path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-rustler = "0.38"
+rustler = "0.39"
 
 html5ever = "0.40"
 markup5ever = "0.40"
