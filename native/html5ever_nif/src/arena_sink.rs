@@ -381,11 +381,10 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
     loop {
         let mut stack_top = stack.pop().expect("stack should not be empty");
 
-        // We check for all children from the node at the top of the stack.
         if let Some(child) = stack_top.next_child {
             stack_top.next_child = child.next_sibling.get();
 
-            // The node at the top is going to be revisited later.
+            // The node at the top is going to be revisited again later.
             stack.push(stack_top);
             // The next one to be visited is "this child".
             // And we go deep to check all the "family tree" remaining.
@@ -397,15 +396,16 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
 
             continue;
         } else {
-            // If there are no more children, we add the child to the parent.
-            //
+            // If there are no more children, we add the child to the parent
+            // at the end of this branch.
+
             // In case we are at the root (NodeDate::Document),
             // we finish and return all the document children (root nodes).
 
             let term = match &stack_top.node_ref.data {
                 NodeData::Document => {
                     // At this point the nodes in the stack were fully processed.
-                    assert_eq!(stack.len(), 0);
+                    assert!(stack.is_empty());
                     return stack_top.children.encode(env);
                 }
                 NodeData::Doctype {
@@ -452,7 +452,7 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
             // We are modifing the parent here.
             stack
                 .last_mut()
-                .expect("top should exist")
+                .expect("parent should exist at the top of the stack")
                 .children
                 .push(term);
         }
