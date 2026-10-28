@@ -34,8 +34,8 @@ fn parse<'a>(
     // So using a bit more than that.
     let arena = typed_arena::Arena::with_capacity(800);
 
-    let first_node = arena_sink::html5ever_parse_slice_into_arena(utf8.as_bytes(), &arena);
-    let term = arena_sink::nodes_to_term(env, first_node, attributes_as_maps);
+    let root_node = arena_sink::html5ever_parse_slice_into_arena(utf8.as_bytes(), &arena);
+    let term = arena_sink::arena_sink_tree_to_term(env, root_node, attributes_as_maps);
 
     Ok(term)
 }
