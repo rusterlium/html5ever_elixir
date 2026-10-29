@@ -10,7 +10,7 @@ In order to release a new version to Hex.pm we first need to:
 6. run `HTML5EVER_BUILD=1 mix rustler_precompiled.download Html5ever.Native --all --print`
 7. copy the output of the mix task and add to the release notes
 8. make sure the `target` directory is removed with
-   `rm -rf native/html5ever_elixir/target`
+   `rm -rf native/html5ever_nif/target`
 9. run `mix hex.publish` and **make sure the checksum file is present**
    in the list of files to be published.
    The checksum file is named `checksum-Elixir.Html5ever.Native.exs`.
