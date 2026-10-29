@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-10-29
+
+### Fixed
+
+- Avoid segfault with deeply nested documents.
+
+  If a document has a lot of open nested tags, it would give a
+  stack overflow error because the implementation was using recursion.
+  This is now fixed by using an interactive approach. This regression
+  was introduced in `v0.18`.
+
+- Remove warning about unused `require Logger`.
+
 ## [0.18.0] - 2026-04-16
 
 ### Changed
@@ -218,7 +231,8 @@ is not needed for most of people using this project.
 
 - Add support for OTP 24. This was achieved by updating Rustler to v0.22.
 
-[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/rusterlium/html5ever_elixir/compare/v0.18.1...HEAD
+[0.18.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/rusterlium/html5ever_elixir/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/rusterlium/html5ever_elixir/compare/v0.16.0...v0.16.1
