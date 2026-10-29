@@ -319,4 +319,12 @@ defmodule Html5everTest do
                 }
               ]}
   end
+
+  # This one takes more time, but it's a regression test.
+  test "prevents segfault with deeply nested document" do
+    # Issue: https://github.com/rusterlium/html5ever_elixir/issues/259
+    html = Enum.reduce(1..4000, "", fn _, acc -> "<div>" <> acc end)
+
+    assert {:ok, _doc} = Html5ever.parse(html)
+  end
 end

@@ -361,64 +361,101 @@ impl<'arena> TreeSink for ArenaSink<'arena> {
     }
 }
 
-pub(crate) fn nodes_to_term<'arena, 'env>(
+struct RecState<'a, 'arena> {
+    node_ref: Ref<'arena>,
+    next_child: Option<&'arena Node<'arena>>,
+    children: Vec<Term<'a>>,
+}
+
+pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
     env: Env<'env>,
-    node: &Node<'arena>,
+    root_node: Ref<'arena>,
     attrs_as_maps: bool,
 ) -> Term<'env> {
-    match &node.data {
-        NodeData::Document => {
-            let mut terms: Vec<Term> = Vec::new();
-            let mut child = node.first_child.get();
-            while let Some(current_child) = child {
-                let encoded_child = nodes_to_term(env, current_child, attrs_as_maps);
-                terms.push(encoded_child);
-                child = current_child.next_sibling.get();
-            }
+    let mut stack: Vec<RecState> = vec![RecState {
+        node_ref: root_node,
+        next_child: root_node.first_child.get(),
+        children: Vec::new(),
+    }];
 
-            terms.encode(env)
-        }
-        NodeData::Doctype {
-            name,
-            public_id,
-            system_id,
-        } => (
-            atoms::doctype(),
-            StrTendrilWrapper(name),
-            StrTendrilWrapper(public_id),
-            StrTendrilWrapper(system_id),
-        )
-            .encode(env),
-        NodeData::Text { contents } => {
-            let text = contents.borrow();
-            StrTendrilWrapper(&text).encode(env)
-        }
-        NodeData::Comment { contents } => {
-            (atoms::comment(), StrTendrilWrapper(contents)).encode(env)
-        }
-        NodeData::Element { name, attrs, .. } => {
-            let mut terms: Vec<Term> = Vec::new();
+    loop {
+        let mut stack_top = stack.pop().expect("stack should not be empty");
 
-            let mut child = node.first_child.get();
-            while let Some(current_child) = child {
-                let encoded_child = nodes_to_term(env, current_child, attrs_as_maps);
-                terms.push(encoded_child);
-                child = current_child.next_sibling.get();
-            }
+        if let Some(child) = stack_top.next_child {
+            stack_top.next_child = child.next_sibling.get();
 
-            (
-                &name.local.to_string(),
-                attributes_to_term(env, attrs, attrs_as_maps),
-                terms,
-            )
-                .encode(env)
+            // The node at the top is going to be revisited again later.
+            stack.push(stack_top);
+            // The next one to be visited is "this child".
+            // And we go deep to check all the "family tree" remaining.
+            stack.push(RecState {
+                node_ref: child,
+                next_child: child.first_child.get(),
+                children: Vec::new(),
+            });
+
+            continue;
+        } else {
+            // If there are no more children, we add the child to the parent
+            // at the end of this branch.
+
+            // In case we are at the root (NodeDate::Document),
+            // we finish and return all the document children (root nodes).
+
+            let term = match &stack_top.node_ref.data {
+                NodeData::Document => {
+                    // At this point the nodes in the stack were fully processed.
+                    assert!(stack.is_empty());
+                    return stack_top.children.encode(env);
+                }
+                NodeData::Doctype {
+                    name,
+                    public_id,
+                    system_id,
+                } => {
+                    assert!(!stack.is_empty());
+                    assert!(stack_top.children.is_empty());
+
+                    (
+                        atoms::doctype(),
+                        StrTendrilWrapper(name),
+                        StrTendrilWrapper(public_id),
+                        StrTendrilWrapper(system_id),
+                    )
+                        .encode(env)
+                }
+                NodeData::Text { contents } => {
+                    let text = contents.borrow();
+                    StrTendrilWrapper(&text).encode(env)
+                }
+                NodeData::Comment { contents } => {
+                    (atoms::comment(), StrTendrilWrapper(contents)).encode(env)
+                }
+                NodeData::Element { name, attrs, .. } => {
+                    assert!(!stack.is_empty());
+
+                    (
+                        QualNameWrapper(name),
+                        attributes_to_term(env, attrs, attrs_as_maps),
+                        stack_top.children,
+                    )
+                        .encode(env)
+                }
+                NodeData::ProcessingInstruction { target, contents } => (
+                    atoms::process_instruction(),
+                    StrTendrilWrapper(target),
+                    StrTendrilWrapper(contents),
+                )
+                    .encode(env),
+            };
+
+            // We are modifing the parent here.
+            stack
+                .last_mut()
+                .expect("parent should exist at the top of the stack")
+                .children
+                .push(term);
         }
-        NodeData::ProcessingInstruction { target, contents } => (
-            atoms::process_instruction(),
-            StrTendrilWrapper(target),
-            StrTendrilWrapper(contents),
-        )
-            .encode(env),
     }
 }
 
