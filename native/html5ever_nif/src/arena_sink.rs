@@ -519,7 +519,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
             NodeData::Document => {
                 let mut children = get_children(node);
                 let children_ids: Vec<usize> = children.iter().map(|c| c.id).collect();
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 4] = [
                     (atom_children, children_ids.encode(env)),
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
@@ -543,7 +543,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
                 main_map
             }
             NodeData::Doctype { name, .. } => {
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 4] = [
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
                     (atom_type, atoms::doctype().encode(env)),
@@ -561,7 +561,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
             NodeData::Text { contents } => {
                 let text = contents.borrow();
 
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 4] = [
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
                     (atom_type, atom_text),
@@ -577,7 +577,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
                 nodes_map
             }
             NodeData::Comment { contents } => {
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 4] = [
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
                     (atom_type, atoms::comment().encode(env)),
@@ -595,7 +595,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
             NodeData::Element { name, attrs, .. } => {
                 let mut children = get_children(node);
                 let children_ids: Vec<usize> = children.iter().map(|c| c.id).collect();
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 6] = [
                     (atom_attrs, attributes_to_term(env, attrs, attrs_as_maps)),
                     (atom_children, children_ids.encode(env)),
                     (atom_id, node_id_encoded),
@@ -617,7 +617,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
                 nodes_map
             }
             NodeData::ProcessingInstruction { target, contents } => {
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 5] = [
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
                     (atom_type, atoms::process_instruction().encode(env)),
