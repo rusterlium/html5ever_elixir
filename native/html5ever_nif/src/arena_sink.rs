@@ -364,7 +364,7 @@ impl<'arena> TreeSink for ArenaSink<'arena> {
 struct RecState<'a, 'arena> {
     node_ref: Ref<'arena>,
     next_child: Option<&'arena Node<'arena>>,
-    children: Vec<Term<'a>>,
+    children: Option<Vec<Term<'a>>>,
 }
 
 pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
@@ -375,7 +375,7 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
     let mut stack: Vec<RecState> = vec![RecState {
         node_ref: root_node,
         next_child: root_node.first_child.get(),
-        children: Vec::new(),
+        children: Some(Vec::with_capacity(20)),
     }];
 
     loop {
@@ -391,7 +391,7 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
             stack.push(RecState {
                 node_ref: child,
                 next_child: child.first_child.get(),
-                children: Vec::new(),
+                children: None,
             });
 
             continue;
@@ -406,7 +406,7 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
                 NodeData::Document => {
                     // At this point the nodes in the stack were fully processed.
                     assert!(stack.is_empty());
-                    return stack_top.children.encode(env);
+                    return stack_top.children.unwrap_or_default().encode(env);
                 }
                 NodeData::Doctype {
                     name,
@@ -414,7 +414,7 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
                     system_id,
                 } => {
                     assert!(!stack.is_empty());
-                    assert!(stack_top.children.is_empty());
+                    assert!(stack_top.children.is_none());
 
                     (
                         atoms::doctype(),
@@ -437,7 +437,7 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
                     (
                         QualNameWrapper(name),
                         attributes_to_term(env, attrs, attrs_as_maps),
-                        stack_top.children,
+                        stack_top.children.unwrap_or_default(),
                     )
                         .encode(env)
                 }
@@ -450,11 +450,13 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
             };
 
             // We are modifing the parent here.
-            stack
+            let children = stack
                 .last_mut()
                 .expect("parent should exist at the top of the stack")
                 .children
-                .push(term);
+                .get_or_insert_default();
+
+            (*children).push(term);
         }
     }
 }
