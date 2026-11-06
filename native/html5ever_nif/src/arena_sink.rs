@@ -406,7 +406,14 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
                 NodeData::Document => {
                     // At this point the nodes in the stack were fully processed.
                     assert!(stack.is_empty());
-                    return stack_top.children.unwrap_or_default().encode(env);
+
+                    let list_term = if let Some(children) = stack_top.children {
+                        children.encode(env)
+                    } else {
+                        Term::list_new_empty(env)
+                    };
+
+                    return list_term;
                 }
                 NodeData::Doctype {
                     name,
@@ -434,10 +441,16 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
                 NodeData::Element { name, attrs, .. } => {
                     assert!(!stack.is_empty());
 
+                    let list_term = if let Some(children) = stack_top.children {
+                        children.encode(env)
+                    } else {
+                        Term::list_new_empty(env)
+                    };
+
                     (
                         QualNameWrapper(name),
                         attributes_to_term(env, attrs, attrs_as_maps),
-                        stack_top.children.unwrap_or_default(),
+                        list_term,
                     )
                         .encode(env)
                 }
