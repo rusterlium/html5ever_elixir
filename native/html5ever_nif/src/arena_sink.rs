@@ -364,7 +364,7 @@ impl<'arena> TreeSink for ArenaSink<'arena> {
 struct RecState<'a, 'arena> {
     node_ref: Ref<'arena>,
     next_child: Option<&'arena Node<'arena>>,
-    children: Vec<Term<'a>>,
+    children: Option<Vec<Term<'a>>>,
 }
 
 pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
@@ -375,7 +375,7 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
     let mut stack: Vec<RecState> = vec![RecState {
         node_ref: root_node,
         next_child: root_node.first_child.get(),
-        children: Vec::new(),
+        children: Some(Vec::with_capacity(20)),
     }];
 
     loop {
@@ -391,7 +391,7 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
             stack.push(RecState {
                 node_ref: child,
                 next_child: child.first_child.get(),
-                children: Vec::new(),
+                children: None,
             });
 
             continue;
@@ -406,7 +406,14 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
                 NodeData::Document => {
                     // At this point the nodes in the stack were fully processed.
                     assert!(stack.is_empty());
-                    return stack_top.children.encode(env);
+
+                    let list_term = if let Some(children) = stack_top.children {
+                        children.encode(env)
+                    } else {
+                        Term::list_new_empty(env)
+                    };
+
+                    return list_term;
                 }
                 NodeData::Doctype {
                     name,
@@ -414,7 +421,7 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
                     system_id,
                 } => {
                     assert!(!stack.is_empty());
-                    assert!(stack_top.children.is_empty());
+                    assert!(stack_top.children.is_none());
 
                     (
                         atoms::doctype(),
@@ -434,10 +441,16 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
                 NodeData::Element { name, attrs, .. } => {
                     assert!(!stack.is_empty());
 
+                    let list_term = if let Some(children) = stack_top.children {
+                        children.encode(env)
+                    } else {
+                        Term::list_new_empty(env)
+                    };
+
                     (
                         QualNameWrapper(name),
                         attributes_to_term(env, attrs, attrs_as_maps),
-                        stack_top.children,
+                        list_term,
                     )
                         .encode(env)
                 }
@@ -450,11 +463,13 @@ pub(crate) fn arena_sink_tree_to_term<'arena, 'env>(
             };
 
             // We are modifing the parent here.
-            stack
+            let children = stack
                 .last_mut()
                 .expect("parent should exist at the top of the stack")
                 .children
-                .push(term);
+                .get_or_insert_default();
+
+            (*children).push(term);
         }
     }
 }
@@ -519,7 +534,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
             NodeData::Document => {
                 let mut children = get_children(node);
                 let children_ids: Vec<usize> = children.iter().map(|c| c.id).collect();
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 4] = [
                     (atom_children, children_ids.encode(env)),
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
@@ -543,7 +558,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
                 main_map
             }
             NodeData::Doctype { name, .. } => {
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 4] = [
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
                     (atom_type, atoms::doctype().encode(env)),
@@ -561,7 +576,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
             NodeData::Text { contents } => {
                 let text = contents.borrow();
 
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 4] = [
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
                     (atom_type, atom_text),
@@ -577,7 +592,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
                 nodes_map
             }
             NodeData::Comment { contents } => {
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 4] = [
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
                     (atom_type, atoms::comment().encode(env)),
@@ -595,7 +610,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
             NodeData::Element { name, attrs, .. } => {
                 let mut children = get_children(node);
                 let children_ids: Vec<usize> = children.iter().map(|c| c.id).collect();
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 6] = [
                     (atom_attrs, attributes_to_term(env, attrs, attrs_as_maps)),
                     (atom_children, children_ids.encode(env)),
                     (atom_id, node_id_encoded),
@@ -617,7 +632,7 @@ pub(crate) fn nodes_to_flat_term<'env>(
                 nodes_map
             }
             NodeData::ProcessingInstruction { target, contents } => {
-                let pairs: Vec<(Term, Term)> = vec![
+                let pairs: [(Term, Term); 5] = [
                     (atom_id, node_id_encoded),
                     (atom_parent, node.parent.get().map(|n| n.id).encode(env)),
                     (atom_type, atoms::process_instruction().encode(env)),
